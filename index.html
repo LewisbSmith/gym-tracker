@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#04505e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Gym Tracker" />
+  <link rel="manifest" href="./manifest.json" />
   <title>Gym Tracker</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -10,607 +15,349 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-    }
-    #root {
-      width: 100%;
-      max-width: 480px;
-      background: #fff;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; justify-content: center; }
+    #root { width: 100%; max-width: 480px; background: #fff; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
 
     /* Header */
-    .header {
-      background: #04505e;
-      color: #fff;
-      padding: 16px 20px 12px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
-    .header p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+    .header { background: #04505e; color: #fff; padding: 14px 20px; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header p { font-size: 12px; opacity: 0.7; margin-top: 1px; }
 
-    /* Nav */
-    .nav {
-      display: flex;
-      background: #fff;
-      border-bottom: 2px solid #f0f0f0;
-      position: sticky;
-      top: 60px;
-      z-index: 99;
-    }
-    .nav-btn {
-      flex: 1;
-      padding: 12px 4px;
-      border: none;
-      background: none;
-      font-size: 12px;
-      font-weight: 600;
-      color: #888;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      transition: color 0.15s;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-    }
-    .nav-btn.active { color: #04505e; border-bottom: 2px solid #04505e; margin-bottom: -2px; }
-    .nav-btn svg { width: 18px; height: 18px; }
+    /* Bottom Nav */
+    .nav { display: flex; background: #fff; border-top: 1px solid #e8e8e8; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 100; }
+    .nav-btn { flex: 1; padding: 10px 4px 12px; border: none; background: none; font-size: 11px; font-weight: 600; color: #aaa; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .nav-btn .ni { font-size: 20px; line-height: 1; }
+    .nav-btn.active { color: #04505e; }
 
     /* Content */
-    .content { flex: 1; padding: 16px; overflow-y: auto; }
+    .content { flex: 1; padding: 16px; padding-bottom: 82px; }
 
     /* Stat pills */
-    .stat-row { display: flex; gap: 8px; margin-bottom: 16px; }
-    .stat-pill {
-      flex: 1;
-      background: #f0f8f9;
-      border: 1px solid #d0eaed;
-      border-radius: 10px;
-      padding: 10px 8px;
-      text-align: center;
-    }
-    .stat-pill .val { font-size: 22px; font-weight: 700; color: #04505e; }
+    .stat-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .stat-pill { flex: 1; background: #f0f8f9; border: 1px solid #d0eaed; border-radius: 10px; padding: 10px 6px; text-align: center; }
+    .stat-pill .val { font-size: 20px; font-weight: 700; color: #04505e; }
     .stat-pill .lbl { font-size: 10px; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
 
-    /* Session grid */
-    .week-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-    .session-card {
-      border-radius: 10px;
-      padding: 14px 12px;
-      border: 2px solid #e8e8e8;
-      background: #fff;
-      position: relative;
-    }
-    .session-card.done { border-color: #1D9E75; background: #f0faf6; }
-    .session-card.today { border-color: #04505e; }
-    .session-card.today.done { border-color: #1D9E75; }
-    .session-card .day { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
-    .session-card .name { font-size: 14px; font-weight: 700; color: #222; margin: 4px 0 2px; }
-    .session-card .sub { font-size: 11px; color: #888; }
-    .session-card .check { position: absolute; top: 10px; right: 10px; font-size: 18px; }
-    .today-banner {
-      background: #04505e;
-      color: #fff;
-      border-radius: 10px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .today-banner .info .lbl { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
-    .today-banner .info .name { font-size: 17px; font-weight: 700; margin-top: 2px; }
-    .start-btn {
-      background: #fff;
-      color: #04505e;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .done-banner {
-      background: #1D9E75;
-      color: #fff;
-      border-radius: 10px;
-      padding: 14px 16px;
-      text-align: center;
-      font-weight: 600;
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
+    /* Today card */
+    .today-card { background: #04505e; color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .today-card .tc-lbl { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
+    .today-card .tc-name { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+    .today-card .tc-meta { font-size: 13px; opacity: 0.8; margin-bottom: 14px; }
+    .today-card .tc-btn { background: #fff; color: #04505e; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .done-card { background: #1D9E75; color: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-weight: 600; font-size: 14px; text-align: center; }
+    .rest-card { background: #f0f0f0; color: #666; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 14px; text-align: center; }
+
+    /* Week */
+    .week-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .week-title { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .week-count { font-size: 13px; font-weight: 700; color: #04505e; }
+    .week-bar { height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+    .week-bar-fill { height: 100%; background: #1D9E75; border-radius: 3px; transition: width 0.3s; }
+    .week-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .day-card { border: 2px solid #e8e8e8; border-radius: 8px; padding: 10px 6px; text-align: center; }
+    .day-card.done { border-color: #1D9E75; background: #f0faf6; }
+    .day-card.today { border-color: #04505e; }
+    .day-card.today.done { border-color: #1D9E75; }
+    .day-card .dc-day { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
+    .day-card .dc-name { font-size: 12px; font-weight: 700; color: #222; margin: 3px 0 1px; }
+    .day-card .dc-type { font-size: 10px; font-weight: 600; }
+    .day-card .dc-chk { font-size: 14px; margin-top: 4px; }
+    .t-push { color: #e05a2b; } .t-pull { color: #2563eb; } .t-quads { color: #7c3aed; } .t-hinge { color: #0891b2; }
+
+    /* Section label */
+    .slabel { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
 
     /* Workout picker */
-    .workout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-    .workout-card {
-      border: 2px solid #e8e8e8;
-      border-radius: 10px;
-      padding: 14px 12px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .workout-card:hover { border-color: #04505e; background: #f0f8f9; }
-    .workout-card .wname { font-size: 14px; font-weight: 700; color: #222; }
-    .workout-card .wtype { font-size: 11px; color: #04505e; font-weight: 600; margin-top: 2px; }
-    .workout-card .wcount { font-size: 11px; color: #888; margin-top: 4px; }
+    .workout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .workout-card { border: 2px solid #e8e8e8; border-radius: 10px; padding: 14px 12px; cursor: pointer; transition: border-color 0.15s; }
+    .workout-card:active { border-color: #04505e; background: #f0f8f9; }
+    .wc-name { font-size: 15px; font-weight: 700; color: #222; }
+    .wc-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
+    .wc-meta { font-size: 11px; color: #888; margin-top: 4px; }
 
-    /* Log exercise */
-    .log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .back-btn {
-      background: none; border: none; cursor: pointer;
-      color: #04505e; font-size: 14px; font-weight: 600;
-      display: flex; align-items: center; gap: 4px;
-    }
-    .log-header h2 { font-size: 18px; font-weight: 700; color: #222; }
-    .exercise-block { margin-bottom: 16px; border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
-    .exercise-title {
-      background: #f8f8f8;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-weight: 700;
-      color: #222;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .exercise-title span { font-size: 11px; color: #888; font-weight: 400; }
-    .set-row {
-      display: grid;
-      grid-template-columns: 32px 1fr 1fr 40px;
-      gap: 8px;
-      padding: 8px 14px;
-      align-items: center;
-      border-top: 1px solid #f0f0f0;
-    }
+    /* Log */
+    .log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .back-btn { background: none; border: none; cursor: pointer; color: #04505e; font-size: 14px; font-weight: 600; padding: 0; }
+    .log-title { font-size: 18px; font-weight: 700; color: #222; }
+
+    .ex-block { margin-bottom: 12px; border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
+    .ex-head { background: #f8f8f8; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+    .ex-head-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .ex-name { font-size: 14px; font-weight: 700; color: #222; }
+    .ex-target { font-size: 11px; color: #04505e; font-weight: 600; }
+    .ex-last { font-size: 11px; color: #888; margin-top: 2px; }
+
+    .set-row { display: grid; grid-template-columns: 26px 1fr 64px 34px; gap: 5px; padding: 8px 10px; align-items: center; border-bottom: 1px solid #f8f8f8; }
     .set-row.done-set { background: #f0faf6; }
-    .set-num { font-size: 12px; color: #888; font-weight: 600; text-align: center; }
-    .set-input {
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 7px 8px;
-      font-size: 14px;
-      font-weight: 600;
-      width: 100%;
-      text-align: center;
-      color: #222;
-    }
-    .set-input:focus { outline: none; border-color: #04505e; }
-    .set-label { font-size: 10px; color: #888; text-align: center; display: block; margin-top: 2px; }
-    .tick-btn {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      border: 2px solid #ddd;
-      background: #fff;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      transition: all 0.15s;
-    }
-    .tick-btn.ticked { border-color: #1D9E75; background: #1D9E75; color: #fff; }
-    .add-set-btn {
-      display: block;
-      width: 100%;
-      padding: 9px;
-      border: none;
-      background: #f8f8f8;
-      color: #04505e;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      border-top: 1px solid #f0f0f0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .finish-btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      background: #04505e;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    .finish-btn:disabled { background: #ccc; cursor: default; }
-    .completion-msg {
-      text-align: center;
-      padding: 32px 16px;
-    }
-    .completion-msg .emoji { font-size: 64px; margin-bottom: 12px; }
-    .completion-msg h2 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 8px; }
-    .completion-msg p { color: #666; font-size: 14px; margin-bottom: 8px; }
-    .completion-msg .vol { font-size: 18px; font-weight: 700; color: #04505e; }
+    .set-num { font-size: 11px; color: #aaa; font-weight: 700; text-align: center; }
+    .wfield { display: flex; align-items: center; gap: 2px; }
+    .adj { width: 26px; height: 32px; border: 1px solid #ddd; background: #f8f8f8; border-radius: 5px; font-size: 16px; font-weight: 700; color: #444; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .adj:active { background: #e0e0e0; }
+    .winput { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 6px 2px; font-size: 14px; font-weight: 700; text-align: center; color: #222; min-width: 0; }
+    .winput:focus { outline: none; border-color: #04505e; }
+    .rinput { border: 1px solid #ddd; border-radius: 6px; padding: 6px 2px; font-size: 14px; font-weight: 700; text-align: center; color: #222; width: 100%; }
+    .rinput:focus { outline: none; border-color: #04505e; }
+    .tick { width: 34px; height: 34px; border-radius: 8px; border: 2px solid #ddd; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .tick.ticked { border-color: #1D9E75; background: #1D9E75; color: #fff; }
+    .add-set-row { padding: 8px 14px; }
+    .add-set-btn { background: none; border: 1px dashed #ccc; border-radius: 6px; color: #888; font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer; width: 100%; }
+
+    .finish-btn { display: block; width: 100%; padding: 15px; background: #04505e; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .finish-btn:disabled { background: #bbb; cursor: default; font-size: 13px; }
+
+    /* Review */
+    .review-summary { background: #f0f8f9; border: 1px solid #d0eaed; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .review-vol { font-size: 30px; font-weight: 700; color: #04505e; }
+    .review-vol-lbl { font-size: 12px; color: #888; margin-top: 1px; }
+    .review-ex { margin-top: 12px; }
+    .review-ex-row { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid #e8e8e8; font-size: 13px; }
+    .review-ex-name { color: #333; font-weight: 600; }
+    .review-ex-sets { color: #888; }
+    .pr-alert { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: #92400e; }
+    .confirm-btn { display: block; width: 100%; padding: 15px; background: #1D9E75; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+    .cancel-btn { display: block; width: 100%; padding: 12px; background: #f8f8f8; color: #555; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* Completion */
+    .completion { text-align: center; padding: 40px 16px; }
+    .completion .emo { font-size: 64px; margin-bottom: 12px; }
+    .completion h2 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 6px; }
+    .completion p { color: #666; font-size: 14px; margin-bottom: 6px; }
+    .completion .vol { font-size: 20px; font-weight: 700; color: #04505e; }
 
     /* Progress */
-    .lift-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-    .lift-btn {
-      padding: 7px 12px;
-      border-radius: 20px;
-      border: 2px solid #e8e8e8;
-      background: #fff;
-      font-size: 12px;
-      font-weight: 600;
-      color: #555;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
+    .lift-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .lift-btn { padding: 6px 12px; border-radius: 20px; border: 2px solid #e8e8e8; background: #fff; font-size: 12px; font-weight: 600; color: #555; cursor: pointer; }
     .lift-btn.active { border-color: #04505e; background: #04505e; color: #fff; }
-    .chart-wrap { border: 1px solid #e8e8e8; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-    .chart-wrap canvas { max-height: 220px; }
-    .session-history h3 { font-size: 14px; font-weight: 700; color: #222; margin-bottom: 10px; }
-    .history-item {
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .history-item .hi-left .date { font-size: 12px; color: #888; }
-    .history-item .hi-left .wname { font-size: 14px; font-weight: 700; color: #222; margin-top: 2px; }
-    .history-item .vol-badge {
-      background: #f0f8f9;
-      color: #04505e;
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 13px;
-      font-weight: 700;
-    }
+    .chart-wrap { border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+
+    .hist-item { border: 1px solid #e8e8e8; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+    .hist-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .hist-date { font-size: 12px; color: #888; }
+    .hist-name { font-size: 14px; font-weight: 700; color: #222; margin-top: 2px; }
+    .hist-vol { background: #f0f8f9; color: #04505e; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .hist-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .edit-btn { flex: 1; padding: 7px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #04505e; color: #04505e; background: #fff; }
+    .del-btn { flex: 1; padding: 7px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #e8e8e8; color: #e53e3e; background: #fff; }
+    .confirm-del { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 10px 12px; margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+    .confirm-del p { font-size: 12px; color: #e53e3e; flex: 1; font-weight: 600; }
+    .confirm-del button { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
+    .cy { background: #e53e3e; color: #fff; }
+    .cn { background: #f0f0f0; color: #555; }
+
+    /* Data */
+    .data-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8e8e8; }
+    .data-section h3 { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .data-btns { display: flex; gap: 8px; }
+    .data-btn { flex: 1; padding: 10px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #f8f8f8; color: #333; text-align: center; }
+    .data-btn.danger { color: #e53e3e; border-color: #fed7d7; background: #fff5f5; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+    .modal { background: #fff; width: 100%; max-width: 480px; max-height: 88vh; border-radius: 16px 16px 0 0; padding: 20px 16px 32px; overflow-y: auto; }
+    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal-hdr h3 { font-size: 17px; font-weight: 700; color: #222; }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #888; }
+    .modal-save { display: block; width: 100%; padding: 14px; background: #04505e; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
 
     /* PRs */
     .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .pr-card {
-      border: 1px solid #e8e8e8;
-      border-radius: 10px;
-      padding: 14px 12px;
-      position: relative;
-    }
-    .pr-card .pr-name { font-size: 13px; font-weight: 700; color: #222; margin-bottom: 8px; line-height: 1.3; }
-    .pr-card .pr-weight { font-size: 26px; font-weight: 700; color: #04505e; }
-    .pr-card .pr-unit { font-size: 13px; color: #888; }
-    .pr-card .pr-reps { font-size: 12px; color: #555; margin-top: 2px; }
-    .pr-card .pr-date { font-size: 11px; color: #aaa; margin-top: 6px; }
-    .pr-badge {
-      position: absolute;
-      top: 10px; right: 10px;
-      background: #f59e0b;
-      color: #fff;
-      border-radius: 6px;
-      padding: 2px 7px;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 48px 16px;
-      color: #aaa;
-    }
-    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
+    .pr-card { border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 12px; position: relative; }
+    .pr-badge { position: absolute; top: 10px; right: 10px; background: #f59e0b; color: #fff; border-radius: 5px; padding: 2px 6px; font-size: 10px; font-weight: 700; }
+    .pr-name { font-size: 12px; font-weight: 700; color: #444; margin-bottom: 8px; line-height: 1.3; padding-right: 30px; }
+    .pr-weight { font-size: 26px; font-weight: 700; color: #04505e; }
+    .pr-unit { font-size: 13px; color: #888; }
+    .pr-reps { font-size: 12px; color: #555; margin-top: 1px; }
+    .pr-1rm { font-size: 11px; color: #04505e; font-weight: 600; margin-top: 3px; }
+    .pr-date { font-size: 11px; color: #bbb; margin-top: 5px; }
+
+    /* Empty / misc */
+    .empty { text-align: center; padding: 48px 16px; color: #aaa; }
+    .empty .emo { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 14px; line-height: 1.6; }
+    .no-data { text-align: center; padding: 20px; color: #bbb; font-size: 13px; }
 
     /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #f59e0b;
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 700;
-      z-index: 1000;
-      animation: fadeInOut 3s forwards;
-      white-space: nowrap;
-    }
-    @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
-      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-      75% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .no-data { text-align: center; padding: 24px; color: #aaa; font-size: 13px; }
-    .section-label { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; margin-top: 4px; }
+    .toast { position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; z-index: 300; animation: fio 3s forwards; white-space: nowrap; max-width: 90%; }
+    @keyframes fio { 0%{opacity:0;transform:translateX(-50%) translateY(8px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 75%{opacity:1} 100%{opacity:0} }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-// ── Constants ──────────────────────────────────────────────────────────────
 const WORKOUTS = [
-  {
-    id: 'upper-a', name: 'Upper A', type: 'Push', day: 'Mon',
-    exercises: [
-      { name: 'Bench press', sets: 4, reps: 8 },
-      { name: 'Overhead press', sets: 3, reps: 10 },
-      { name: 'Incline dumbbell press', sets: 3, reps: 10 },
-      { name: 'Lateral raises', sets: 3, reps: 15 },
-      { name: 'Tricep pushdowns', sets: 3, reps: 12 },
-    ]
-  },
-  {
-    id: 'upper-b', name: 'Upper B', type: 'Pull', day: 'Wed',
-    exercises: [
-      { name: 'Pull-ups / Lat pulldown', sets: 4, reps: 8 },
-      { name: 'Barbell row', sets: 4, reps: 8 },
-      { name: 'Cable row', sets: 3, reps: 10 },
-      { name: 'Face pulls', sets: 3, reps: 15 },
-      { name: 'Barbell curl', sets: 3, reps: 10 },
-    ]
-  },
-  {
-    id: 'lower-a', name: 'Lower A', type: 'Quads', day: 'Fri',
-    exercises: [
-      { name: 'Barbell squat', sets: 4, reps: 6 },
-      { name: 'Leg press', sets: 3, reps: 10 },
-      { name: 'Bulgarian split squat', sets: 3, reps: 10 },
-      { name: 'Leg extension', sets: 3, reps: 15 },
-      { name: 'Calf raise', sets: 4, reps: 15 },
-    ]
-  },
-  {
-    id: 'lower-b', name: 'Lower B', type: 'Hinge', day: 'Sat',
-    exercises: [
-      { name: 'Romanian deadlift', sets: 4, reps: 8 },
-      { name: 'Leg curl', sets: 3, reps: 12 },
-      { name: 'Hip thrust', sets: 4, reps: 10 },
-      { name: 'Walking lunges', sets: 3, reps: 12 },
-      { name: 'Calf raise', sets: 4, reps: 15 },
-    ]
-  },
+  { id:'upper-a', name:'Upper A', type:'Push', day:'Mon', exercises:[
+    {name:'Bench press',sets:4,reps:8},{name:'Overhead press',sets:3,reps:10},
+    {name:'Incline dumbbell press',sets:3,reps:10},{name:'Lateral raises',sets:3,reps:15},
+    {name:'Tricep pushdowns',sets:3,reps:12}]},
+  { id:'upper-b', name:'Upper B', type:'Pull', day:'Wed', exercises:[
+    {name:'Pull-ups / Lat pulldown',sets:4,reps:8},{name:'Barbell row',sets:4,reps:8},
+    {name:'Cable row',sets:3,reps:10},{name:'Face pulls',sets:3,reps:15},
+    {name:'Barbell curl',sets:3,reps:10}]},
+  { id:'lower-a', name:'Lower A', type:'Quads', day:'Fri', exercises:[
+    {name:'Barbell squat',sets:4,reps:6},{name:'Leg press',sets:3,reps:10},
+    {name:'Bulgarian split squat',sets:3,reps:10},{name:'Leg extension',sets:3,reps:15},
+    {name:'Calf raise',sets:4,reps:15}]},
+  { id:'lower-b', name:'Lower B', type:'Hinge', day:'Sat', exercises:[
+    {name:'Romanian deadlift',sets:4,reps:8},{name:'Leg curl',sets:3,reps:12},
+    {name:'Hip thrust',sets:4,reps:10},{name:'Walking lunges',sets:3,reps:12},
+    {name:'Calf raise',sets:4,reps:15}]},
 ];
+const TYPE_CLS = {Push:'t-push',Pull:'t-pull',Quads:'t-quads',Hinge:'t-hinge'};
 
-const SESSION_DAYS = ['Mon', 'Wed', 'Fri', 'Sat'];
-const DAY_MAP = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+function toDateStr(d){return d.toISOString().split('T')[0];}
+function todayStr(){return toDateStr(new Date());}
+function getMondayOfWeek(d){const day=d.getDay();const diff=day===0?-6:1-day;const m=new Date(d);m.setDate(d.getDate()+diff);return toDateStr(m);}
+function getWeekDates(mon){const m=new Date(mon+'T00:00:00');return{Mon:toDateStr(m),Wed:toDateStr(new Date(m.getTime()+2*86400000)),Fri:toDateStr(new Date(m.getTime()+4*86400000)),Sat:toDateStr(new Date(m.getTime()+5*86400000))};}
+function getTodayDay(){return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];}
+function formatDate(s){if(!s)return'';const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+function calcVolume(exercises){return exercises.reduce((t,ex)=>t+ex.sets.reduce((s,set)=>set.done?s+(parseFloat(set.weight)||0)*(parseInt(set.reps)||0):s,0),0);}
+function epley(w,r){if(!w||!r)return 0;return r===1?w:Math.round(w*(1+r/30)*10)/10;}
 
-function toDateStr(d) {
-  return d.toISOString().split('T')[0];
-}
-function todayStr() { return toDateStr(new Date()); }
+function loadSessions(){try{return JSON.parse(localStorage.getItem('gym_sessions')||'[]');}catch{return[];}}
+function saveSessions(s){localStorage.setItem('gym_sessions',JSON.stringify(s));}
 
-function getMondayOfWeek(d) {
-  const day = d.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1 - day);
-  const mon = new Date(d);
-  mon.setDate(d.getDate() + diff);
-  return toDateStr(mon);
-}
-
-function getWeekDates(mondayStr) {
-  const mon = new Date(mondayStr);
-  return {
-    Mon: toDateStr(mon),
-    Wed: toDateStr(new Date(mon.getTime() + 2 * 86400000)),
-    Fri: toDateStr(new Date(mon.getTime() + 4 * 86400000)),
-    Sat: toDateStr(new Date(mon.getTime() + 5 * 86400000)),
-  };
+function computeStats(sessions){
+  const mon=getMondayOfWeek(new Date());
+  const wDates=Object.values(getWeekDates(mon));
+  const thisWeek=sessions.filter(s=>wDates.includes(s.date)).length;
+  let streak=0,chk=mon;
+  while(true){const wd=Object.values(getWeekDates(chk));if(sessions.filter(s=>wd.includes(s.date)).length>=4){streak++;const m=new Date(chk+'T00:00:00');m.setDate(m.getDate()-7);chk=toDateStr(m);}else break;}
+  return{streak,thisWeek,total:sessions.length};
 }
 
-function getTodayDayAbbr() {
-  const d = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
-  return d;
-}
-
-function formatDate(str) {
-  if (!str) return '';
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function calcVolume(exercises) {
-  return exercises.reduce((total, ex) => {
-    return total + ex.sets.reduce((s, set) => {
-      if (!set.done) return s;
-      return s + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
-    }, 0);
-  }, 0);
-}
-
-// ── Storage ────────────────────────────────────────────────────────────────
-function loadSessions() {
-  try { return JSON.parse(localStorage.getItem('gym_sessions') || '[]'); }
-  catch { return []; }
-}
-function saveSessions(sessions) {
-  localStorage.setItem('gym_sessions', JSON.stringify(sessions));
-}
-
-// ── Stats helpers ──────────────────────────────────────────────────────────
-function computeStats(sessions) {
-  const today = todayStr();
-  const thisWeekMon = getMondayOfWeek(new Date());
-  const thisWeekDates = getWeekDates(thisWeekMon);
-
-  const sessionsThisWeek = sessions.filter(s =>
-    Object.values(thisWeekDates).includes(s.date)
-  ).length;
-
-  // Streak: count consecutive weeks (going back) where >= 4 sessions logged
-  let streak = 0;
-  let checkMon = thisWeekMon;
-  while (true) {
-    const wDates = Object.values(getWeekDates(checkMon));
-    const count = sessions.filter(s => wDates.includes(s.date)).length;
-    if (count >= 4) {
-      streak++;
-      const m = new Date(checkMon);
-      m.setDate(m.getDate() - 7);
-      checkMon = toDateStr(m);
-    } else break;
-  }
-
-  return { streak, sessionsThisWeek, total: sessions.length };
-}
-
-function getPersonalRecords(sessions) {
-  const prs = {};
-  for (const session of sessions) {
-    for (const ex of session.exercises) {
-      for (const set of ex.sets) {
-        if (!set.done || !set.weight) continue;
-        const w = parseFloat(set.weight);
-        const r = parseInt(set.reps);
-        if (!prs[ex.name] || w > prs[ex.name].weight || (w === prs[ex.name].weight && r > prs[ex.name].reps)) {
-          prs[ex.name] = { weight: w, reps: r, date: session.date, wid: session.wid };
-        }
-      }
-    }
+function getPRs(sessions){
+  const prs={};
+  for(const s of sessions)for(const ex of s.exercises)for(const set of ex.sets){
+    if(!set.done||!set.weight)continue;
+    const w=parseFloat(set.weight),r=parseInt(set.reps);
+    if(!prs[ex.name]||w>prs[ex.name].weight||(w===prs[ex.name].weight&&r>prs[ex.name].reps))
+      prs[ex.name]={weight:w,reps:r,date:s.date};
   }
   return prs;
 }
 
-function detectNewPRs(oldSessions, newSession, existingPRs) {
-  const newPRNames = [];
-  for (const ex of newSession.exercises) {
-    for (const set of ex.sets) {
-      if (!set.done || !set.weight) continue;
-      const w = parseFloat(set.weight);
-      const r = parseInt(set.reps);
-      const old = existingPRs[ex.name];
-      if (!old || w > old.weight) {
-        if (!newPRNames.includes(ex.name)) newPRNames.push(ex.name);
-      }
-    }
+function detectNewPRs(prev,session){
+  const old=getPRs(prev);const names=[];
+  for(const ex of session.exercises)for(const set of ex.sets){
+    if(!set.done||!set.weight)continue;
+    const w=parseFloat(set.weight);
+    if(!old[ex.name]||w>old[ex.name].weight)if(!names.includes(ex.name))names.push(ex.name);
   }
-  return newPRNames;
+  return names;
+}
+
+function getLastSession(sessions,wid){
+  return sessions.filter(s=>s.wid===wid).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
 }
 
 // ── App ────────────────────────────────────────────────────────────────────
-function App() {
-  const [tab, setTab] = useState('home');
-  const [sessions, setSessions] = useState(loadSessions);
-  const [toast, setToast] = useState(null);
-  const [toastKey, setToastKey] = useState(0);
+function App(){
+  const [tab,setTab]=useState('home');
+  const [sessions,setSessions]=useState(loadSessions);
+  const [toast,setToast]=useState(null);
+  const [toastKey,setToastKey]=useState(0);
 
-  const showToast = useCallback((msg) => {
-    setToast(msg);
-    setToastKey(k => k + 1);
-    setTimeout(() => setToast(null), 3100);
-  }, []);
+  const showToast=useCallback((msg)=>{setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),3100);},[]);
 
-  const addSession = useCallback((session) => {
-    setSessions(prev => {
-      const existingPRs = getPersonalRecords(prev);
-      const newPRNames = detectNewPRs(prev, session, existingPRs);
-      const updated = [...prev.filter(s => s.date !== session.date || s.wid !== session.wid), session];
-      saveSessions(updated);
-      if (newPRNames.length > 0) {
-        setTimeout(() => showToast(`🏆 New PR${newPRNames.length > 1 ? 's' : ''}: ${newPRNames.slice(0,2).join(', ')}${newPRNames.length > 2 ? '…' : ''}`), 300);
-      }
-      return updated;
+  const addSession=useCallback((session)=>{
+    setSessions(prev=>{
+      const prs=detectNewPRs(prev,session);
+      const next=[...prev.filter(s=>!(s.date===session.date&&s.wid===session.wid)),session];
+      saveSessions(next);
+      if(prs.length>0)setTimeout(()=>showToast(`🏆 New PR${prs.length>1?'s':''}: ${prs.slice(0,2).join(', ')}${prs.length>2?'…':''}`),200);
+      return next;
     });
-  }, [showToast]);
+  },[showToast]);
 
-  const today = getTodayDayAbbr();
-  const todayWorkout = WORKOUTS.find(w => w.day === today);
+  const deleteSession=useCallback((date,wid)=>{
+    setSessions(prev=>{const next=prev.filter(s=>!(s.date===date&&s.wid===wid));saveSessions(next);return next;});
+    showToast('Session deleted');
+  },[showToast]);
 
-  return (
+  const editSession=useCallback((updated)=>{
+    setSessions(prev=>{const next=prev.map(s=>s.date===updated.date&&s.wid===updated.wid?updated:s);saveSessions(next);return next;});
+    showToast('Session updated ✓');
+  },[showToast]);
+
+  const todayDay=getTodayDay();
+  const todayWorkout=WORKOUTS.find(w=>w.day===todayDay);
+
+  return(
     <div>
       <div className="header">
         <h1>💪 Gym Tracker</h1>
-        <p>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <p>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
+      </div>
+      <div className="content">
+        {tab==='home'&&<HomeTab sessions={sessions} todayWorkout={todayWorkout} onStart={()=>setTab('log')}/>}
+        {tab==='log'&&<LogTab sessions={sessions} onSave={addSession} todayWorkout={todayWorkout}/>}
+        {tab==='progress'&&<ProgressTab sessions={sessions} onDelete={deleteSession} onEdit={editSession}/>}
+        {tab==='prs'&&<PRsTab sessions={sessions}/>}
       </div>
       <nav className="nav">
-        {[
-          { id: 'home', label: 'Home', icon: '🏠' },
-          { id: 'log', label: 'Log', icon: '📝' },
-          { id: 'progress', label: 'Progress', icon: '📈' },
-          { id: 'prs', label: 'PRs', icon: '🏆' },
-        ].map(t => (
-          <button key={t.id} className={`nav-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-            <span>{t.icon}</span>
-            {t.label}
+        {[{id:'home',label:'Home',icon:'🏠'},{id:'log',label:'Log',icon:'📝'},{id:'progress',label:'Progress',icon:'📈'},{id:'prs',label:'PRs',icon:'🏆'}].map(t=>(
+          <button key={t.id} className={`nav-btn${tab===t.id?' active':''}`} onClick={()=>setTab(t.id)}>
+            <span className="ni">{t.icon}</span>{t.label}
           </button>
         ))}
       </nav>
-      <div className="content">
-        {tab === 'home' && <HomeTab sessions={sessions} todayWorkout={todayWorkout} onStart={() => setTab('log')} />}
-        {tab === 'log' && <LogTab sessions={sessions} onSave={addSession} todayWorkout={todayWorkout} />}
-        {tab === 'progress' && <ProgressTab sessions={sessions} />}
-        {tab === 'prs' && <PRsTab sessions={sessions} />}
-      </div>
-      {toast && <div key={toastKey} className="toast">{toast}</div>}
+      {toast&&<div key={toastKey} className="toast">{toast}</div>}
     </div>
   );
 }
 
-// ── Home Tab ───────────────────────────────────────────────────────────────
-function HomeTab({ sessions, todayWorkout, onStart }) {
-  const stats = computeStats(sessions);
-  const today = todayStr();
-  const todayDone = sessions.some(s => s.date === today);
-  const thisWeekMon = getMondayOfWeek(new Date());
-  const weekDates = getWeekDates(thisWeekMon);
-  const todayDay = getTodayDayAbbr();
+// ── Home ───────────────────────────────────────────────────────────────────
+function HomeTab({sessions,todayWorkout,onStart}){
+  const stats=computeStats(sessions);
+  const today=todayStr();
+  const todayDone=sessions.some(s=>s.date===today);
+  const weekDates=getWeekDates(getMondayOfWeek(new Date()));
+  const todayDay=getTodayDay();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayIdx=days.indexOf(todayDay);
+  const nextWorkout=!todayWorkout&&WORKOUTS.find(w=>days.indexOf(w.day)>todayIdx);
 
-  return (
+  return(
     <div>
       <div className="stat-row">
-        <div className="stat-pill">
-          <div className="val">🔥 {stats.streak}</div>
-          <div className="lbl">Week Streak</div>
-        </div>
-        <div className="stat-pill">
-          <div className="val">{stats.sessionsThisWeek}/4</div>
-          <div className="lbl">This Week</div>
-        </div>
-        <div className="stat-pill">
-          <div className="val">{stats.total}</div>
-          <div className="lbl">All Time</div>
-        </div>
+        <div className="stat-pill"><div className="val">🔥{stats.streak}</div><div className="lbl">Week Streak</div></div>
+        <div className="stat-pill"><div className="val">{stats.thisWeek}/4</div><div className="lbl">This Week</div></div>
+        <div className="stat-pill"><div className="val">{stats.total}</div><div className="lbl">All Time</div></div>
       </div>
 
-      {todayWorkout && !todayDone && (
-        <div className="today-banner">
-          <div className="info">
-            <div className="lbl">Today's Session</div>
-            <div className="name">{todayWorkout.name} · {todayWorkout.type}</div>
-          </div>
-          <button className="start-btn" onClick={onStart}>Start →</button>
+      {todayWorkout&&!todayDone&&(
+        <div className="today-card">
+          <div className="tc-lbl">Today's Session</div>
+          <div className="tc-name">{todayWorkout.name}</div>
+          <div className="tc-meta">{todayWorkout.type} · {todayWorkout.exercises.length} exercises</div>
+          <button className="tc-btn" onClick={onStart}>Start Today's Workout →</button>
         </div>
       )}
-      {todayDone && (
-        <div className="done-banner">✅ Today's session logged — great work!</div>
-      )}
-      {!todayWorkout && (
-        <div className="done-banner" style={{ background: '#888' }}>Rest day — no session scheduled today.</div>
+      {todayDone&&<div className="done-card">✅ Today's session logged — great work!</div>}
+      {!todayWorkout&&(
+        <div className="rest-card">
+          😴 Rest day today
+          {nextWorkout&&<div style={{marginTop:4,fontSize:12}}>Next: <strong>{nextWorkout.name}</strong> on {nextWorkout.day}</div>}
+        </div>
       )}
 
-      <div className="section-label">This Week</div>
+      <div className="week-header">
+        <span className="week-title">This Week</span>
+        <span className="week-count">{stats.thisWeek} / 4 sessions</span>
+      </div>
+      <div className="week-bar"><div className="week-bar-fill" style={{width:`${(stats.thisWeek/4)*100}%`}}/></div>
       <div className="week-grid">
-        {WORKOUTS.map(w => {
-          const date = weekDates[w.day];
-          const done = sessions.some(s => s.date === date);
-          const isToday = w.day === todayDay;
-          return (
-            <div key={w.id} className={`session-card ${done ? 'done' : ''} ${isToday ? 'today' : ''}`}>
-              <div className="day">{w.day} {isToday ? '· Today' : ''}</div>
-              <div className="name">{w.name}</div>
-              <div className="sub">{w.type} · {w.exercises.length} exercises</div>
-              <div className="check">{done ? '✅' : ''}</div>
+        {WORKOUTS.map(w=>{
+          const done=sessions.some(s=>s.date===weekDates[w.day]);
+          const isToday=w.day===todayDay;
+          return(
+            <div key={w.id} className={`day-card${done?' done':''}${isToday?' today':''}`}>
+              <div className="dc-day">{w.day}</div>
+              <div className="dc-name">{w.name}</div>
+              <div className={`dc-type ${TYPE_CLS[w.type]}`}>{w.type}</div>
+              <div className="dc-chk">{done?'✅':''}</div>
             </div>
           );
         })}
@@ -619,155 +366,136 @@ function HomeTab({ sessions, todayWorkout, onStart }) {
   );
 }
 
-// ── Log Tab ────────────────────────────────────────────────────────────────
-function LogTab({ sessions, onSave, todayWorkout }) {
-  const [selected, setSelected] = useState(null);
-  const [logState, setLogState] = useState(null);
-  const [done, setDone] = useState(false);
-  const [finalVol, setFinalVol] = useState(0);
+// ── Log ────────────────────────────────────────────────────────────────────
+function LogTab({sessions,onSave}){
+  const [phase,setPhase]=useState('pick');
+  const [ls,setLs]=useState(null);
+  const [reviewPRs,setReviewPRs]=useState([]);
+  const [finalVol,setFinalVol]=useState(0);
 
-  function startWorkout(workout) {
-    const exercises = workout.exercises.map(ex => ({
-      name: ex.name,
-      targetSets: ex.sets,
-      targetReps: ex.reps,
-      sets: Array.from({ length: ex.sets }, (_, i) => ({
-        set: i + 1,
-        weight: '',
-        reps: ex.reps,
-        done: false,
-      }))
-    }));
-    setLogState({ workout, exercises });
-    setSelected(workout);
-    setDone(false);
-  }
-
-  function updateSet(exIdx, setIdx, field, value) {
-    setLogState(prev => {
-      const exercises = prev.exercises.map((ex, ei) => {
-        if (ei !== exIdx) return ex;
-        return {
-          ...ex,
-          sets: ex.sets.map((s, si) => si === setIdx ? { ...s, [field]: value } : s)
-        };
-      });
-      return { ...prev, exercises };
+  function startWorkout(workout){
+    const prev=getLastSession(sessions,workout.id);
+    const prevMap={};
+    if(prev)for(const ex of prev.exercises)prevMap[ex.name]=ex.sets;
+    const exercises=workout.exercises.map(ex=>{
+      const ps=prevMap[ex.name]||[];
+      return{name:ex.name,targetSets:ex.sets,targetReps:ex.reps,prevSets:ps,
+        sets:Array.from({length:ex.sets},(_,i)=>({set:i+1,weight:ps[i]?.weight||'',reps:ex.reps,done:false}))};
     });
+    setLs({workout,exercises});setPhase('log');
   }
 
-  function toggleSet(exIdx, setIdx) {
-    updateSet(exIdx, setIdx, 'done', !logState.exercises[exIdx].sets[setIdx].done);
+  function upd(ei,si,field,val){
+    setLs(p=>({...p,exercises:p.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[field]:val})})}));
   }
 
-  function addSet(exIdx) {
-    setLogState(prev => {
-      const exercises = prev.exercises.map((ex, ei) => {
-        if (ei !== exIdx) return ex;
-        const newSet = { set: ex.sets.length + 1, weight: ex.sets[ex.sets.length - 1]?.weight || '', reps: ex.targetReps, done: false };
-        return { ...ex, sets: [...ex.sets, newSet] };
-      });
-      return { ...prev, exercises };
-    });
+  function adj(ei,si,delta){
+    const cur=parseFloat(ls.exercises[ei].sets[si].weight)||0;
+    const next=Math.max(0,Math.round((cur+delta)*2)/2);
+    upd(ei,si,'weight',next===0?'':String(next));
   }
 
-  function finishWorkout() {
-    const session = {
-      date: todayStr(),
-      wid: logState.workout.id,
-      wname: logState.workout.name,
-      exercises: logState.exercises.map(ex => ({
-        name: ex.name,
-        sets: ex.sets.map(s => ({ ...s }))
-      }))
-    };
-    const vol = calcVolume(session.exercises);
-    setFinalVol(vol);
-    onSave(session);
-    setDone(true);
+  function addSet(ei){
+    setLs(p=>({...p,exercises:p.exercises.map((ex,i)=>{
+      if(i!==ei)return ex;
+      const last=ex.sets[ex.sets.length-1];
+      return{...ex,sets:[...ex.sets,{set:ex.sets.length+1,weight:last?.weight||'',reps:ex.targetReps,done:false}]};
+    })}));
   }
 
-  if (done) {
-    return (
-      <div className="completion-msg">
-        <div className="emoji">🎉</div>
-        <h2>{logState.workout.name} Complete!</h2>
-        <p>Session saved successfully.</p>
-        <div className="vol">Total Volume: {finalVol.toLocaleString()} kg</div>
-        <br />
-        <button className="finish-btn" onClick={() => { setSelected(null); setLogState(null); setDone(false); }}>
-          Log Another
-        </button>
+  function goReview(){
+    const session={date:todayStr(),wid:ls.workout.id,wname:ls.workout.name,
+      exercises:ls.exercises.map(ex=>({name:ex.name,sets:ex.sets.map(s=>({...s}))}))};
+    const vol=calcVolume(session.exercises);
+    setFinalVol(vol);setReviewPRs(detectNewPRs(sessions,session));
+    setLs(p=>({...p,pending:session}));setPhase('review');
+  }
+
+  function confirmSave(){onSave(ls.pending);setPhase('done');}
+
+  const anyDone=ls?.exercises.some(ex=>ex.sets.some(s=>s.done));
+
+  if(phase==='done')return(
+    <div className="completion">
+      <div className="emo">🎉</div>
+      <h2>{ls.workout.name} Complete!</h2>
+      <p>Session saved successfully.</p>
+      <div className="vol">{finalVol.toLocaleString()} kg total volume</div><br/>
+      <button className="finish-btn" onClick={()=>{setPhase('pick');setLs(null);}}>Log Another Workout</button>
+    </div>
+  );
+
+  if(phase==='review')return(
+    <div>
+      <div className="log-header">
+        <button className="back-btn" onClick={()=>setPhase('log')}>← Edit</button>
+        <span className="log-title">Review</span>
       </div>
-    );
-  }
-
-  if (logState) {
-    const allDone = logState.exercises.every(ex => ex.sets.some(s => s.done));
-    return (
-      <div>
-        <div className="log-header">
-          <button className="back-btn" onClick={() => { setLogState(null); setSelected(null); }}>← Back</button>
-          <h2>{logState.workout.name}</h2>
+      {reviewPRs.length>0&&<div className="pr-alert">🏆 New PR{reviewPRs.length>1?'s':''}: {reviewPRs.join(', ')}</div>}
+      <div className="review-summary">
+        <div className="review-vol">{finalVol.toLocaleString()} kg</div>
+        <div className="review-vol-lbl">Total Volume</div>
+        <div className="review-ex">
+          {ls.exercises.map((ex,i)=>{
+            const done=ex.sets.filter(s=>s.done).length;
+            return<div key={i} className="review-ex-row"><span className="review-ex-name">{ex.name}</span><span className="review-ex-sets">{done}/{ex.sets.length} sets</span></div>;
+          })}
         </div>
-        {logState.exercises.map((ex, ei) => (
-          <div key={ei} className="exercise-block">
-            <div className="exercise-title">
-              {ex.name}
-              <span>Target: {ex.targetSets}×{ex.targetReps}</span>
+      </div>
+      <button className="confirm-btn" onClick={confirmSave}>Confirm &amp; Save ✓</button>
+      <button className="cancel-btn" onClick={()=>setPhase('log')}>← Keep Editing</button>
+    </div>
+  );
+
+  if(phase==='log'&&ls)return(
+    <div>
+      <div className="log-header">
+        <button className="back-btn" onClick={()=>setPhase('pick')}>← Back</button>
+        <span className="log-title">{ls.workout.name}</span>
+      </div>
+      {ls.exercises.map((ex,ei)=>{
+        const prevBest=ex.prevSets.length>0?(()=>{
+          const maxW=Math.max(...ex.prevSets.filter(s=>s.weight).map(s=>parseFloat(s.weight)||0));
+          const ms=ex.prevSets.find(s=>parseFloat(s.weight)===maxW);
+          return maxW>0?`${maxW}kg × ${ms?.reps||'?'}`:null;
+        })():null;
+        return(
+          <div key={ei} className="ex-block">
+            <div className="ex-head">
+              <div className="ex-head-row"><span className="ex-name">{ex.name}</span><span className="ex-target">{ex.targetSets}×{ex.targetReps}</span></div>
+              <div className="ex-last">{prevBest?`Last time: ${prevBest}`:'First time 💪'}</div>
             </div>
-            {ex.sets.map((set, si) => (
-              <div key={si} className={`set-row ${set.done ? 'done-set' : ''}`}>
-                <div className="set-num">#{set.set}</div>
-                <div>
-                  <input
-                    className="set-input"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="kg"
-                    value={set.weight}
-                    onChange={e => updateSet(ei, si, 'weight', e.target.value)}
-                  />
-                  <span className="set-label">kg</span>
+            {ex.sets.map((set,si)=>(
+              <div key={si} className={`set-row${set.done?' done-set':''}`}>
+                <div className="set-num">S{set.set}</div>
+                <div className="wfield">
+                  <button className="adj" onClick={()=>adj(ei,si,-2.5)}>−</button>
+                  <input className="winput" type="number" inputMode="decimal" placeholder="kg" value={set.weight} onChange={e=>upd(ei,si,'weight',e.target.value)}/>
+                  <button className="adj" onClick={()=>adj(ei,si,2.5)}>+</button>
                 </div>
-                <div>
-                  <input
-                    className="set-input"
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="reps"
-                    value={set.reps}
-                    onChange={e => updateSet(ei, si, 'reps', e.target.value)}
-                  />
-                  <span className="set-label">reps</span>
-                </div>
-                <button
-                  className={`tick-btn ${set.done ? 'ticked' : ''}`}
-                  onClick={() => toggleSet(ei, si)}
-                >
-                  {set.done ? '✓' : ''}
-                </button>
+                <input className="rinput" type="number" inputMode="numeric" value={set.reps} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
+                <button className={`tick${set.done?' ticked':''}`} onClick={()=>upd(ei,si,'done',!set.done)} aria-label={`Set ${set.set} ${set.done?'undo':'done'}`}>{set.done?'✓':''}</button>
               </div>
             ))}
-            <button className="add-set-btn" onClick={() => addSet(ei)}>+ Add Set</button>
+            <div className="add-set-row"><button className="add-set-btn" onClick={()=>addSet(ei)}>+ Add Set</button></div>
           </div>
-        ))}
-        <button className="finish-btn" onClick={finishWorkout}>
-          Finish Workout
-        </button>
-      </div>
-    );
-  }
+        );
+      })}
+      <button className="finish-btn" disabled={!anyDone} onClick={goReview}>
+        {anyDone?'Review & Finish →':'Tick at least one set to finish'}
+      </button>
+    </div>
+  );
 
-  return (
+  return(
     <div>
-      <div className="section-label">Choose Workout</div>
+      <div className="slabel">Choose Workout</div>
       <div className="workout-grid">
-        {WORKOUTS.map(w => (
-          <div key={w.id} className="workout-card" onClick={() => startWorkout(w)}>
-            <div className="wname">{w.name}</div>
-            <div className="wtype">{w.type}</div>
-            <div className="wcount">{w.exercises.length} exercises · {w.day}</div>
+        {WORKOUTS.map(w=>(
+          <div key={w.id} className="workout-card" onClick={()=>startWorkout(w)}>
+            <div className="wc-name">{w.name}</div>
+            <div className={`wc-type ${TYPE_CLS[w.type]}`}>{w.type}</div>
+            <div className="wc-meta">{w.exercises.length} exercises · {w.day}</div>
           </div>
         ))}
       </div>
@@ -775,111 +503,153 @@ function LogTab({ sessions, onSave, todayWorkout }) {
   );
 }
 
-// ── Progress Tab ───────────────────────────────────────────────────────────
-function ProgressTab({ sessions }) {
-  const [selectedLift, setSelectedLift] = useState(null);
-  const chartRef = useRef(null);
-  const chartInstance = useRef(null);
+// ── Progress ───────────────────────────────────────────────────────────────
+function ProgressTab({sessions,onDelete,onEdit}){
+  const [selLift,setSelLift]=useState(null);
+  const [editing,setEditing]=useState(null);
+  const [confirmDel,setConfirmDel]=useState(null);
+  const chartRef=useRef(null);
+  const chartInst=useRef(null);
 
-  // All unique exercise names from logged sessions
-  const allExercises = [...new Set(
-    sessions.flatMap(s => s.exercises.map(e => e.name))
-  )].sort();
+  const allEx=useMemo(()=>[...new Set(sessions.flatMap(s=>s.exercises.map(e=>e.name)))].sort(),[sessions]);
+  const active=selLift||allEx[0]||null;
 
-  // Auto-select first if available
-  const activeLift = selectedLift || allExercises[0] || null;
+  const liftData=useMemo(()=>{
+    if(!active)return[];
+    return sessions.filter(s=>s.exercises.some(e=>e.name===active))
+      .map(s=>{const ex=s.exercises.find(e=>e.name===active);const maxW=Math.max(...ex.sets.filter(st=>st.done&&st.weight).map(st=>parseFloat(st.weight)||0));return{date:s.date,maxW:maxW>0?maxW:null};})
+      .filter(d=>d.maxW!==null).sort((a,b)=>a.date.localeCompare(b.date));
+  },[active,sessions]);
 
-  // Chart data for selected lift
-  const liftData = sessions
-    .filter(s => s.exercises.some(e => e.name === activeLift))
-    .map(s => {
-      const ex = s.exercises.find(e => e.name === activeLift);
-      const maxW = Math.max(...ex.sets.filter(st => st.done && st.weight).map(st => parseFloat(st.weight) || 0));
-      return { date: s.date, maxW: maxW > 0 ? maxW : null };
-    })
-    .filter(d => d.maxW !== null)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  useEffect(()=>{
+    if(!chartRef.current)return;
+    if(chartInst.current){chartInst.current.destroy();chartInst.current=null;}
+    if(liftData.length===0)return;
+    chartInst.current=new Chart(chartRef.current,{type:'line',data:{labels:liftData.map(d=>formatDate(d.date)),datasets:[{label:'Max kg',data:liftData.map(d=>d.maxW),borderColor:'#04505e',backgroundColor:'rgba(4,80,94,0.08)',pointBackgroundColor:'#04505e',pointRadius:5,tension:0.3,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:40}},y:{ticks:{font:{size:11}},beginAtZero:false}}}});
+    return()=>{if(chartInst.current){chartInst.current.destroy();chartInst.current=null;}};
+  },[liftData]);
 
-  useEffect(() => {
-    if (!chartRef.current || !activeLift) return;
-    if (chartInstance.current) { chartInstance.current.destroy(); }
-    if (liftData.length === 0) return;
-    chartInstance.current = new Chart(chartRef.current, {
-      type: 'line',
-      data: {
-        labels: liftData.map(d => formatDate(d.date)),
-        datasets: [{
-          label: 'Max Weight (kg)',
-          data: liftData.map(d => d.maxW),
-          borderColor: '#04505e',
-          backgroundColor: 'rgba(4,80,94,0.08)',
-          pointBackgroundColor: '#04505e',
-          pointRadius: 5,
-          tension: 0.3,
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { font: { size: 10 }, maxRotation: 30 } },
-          y: { ticks: { font: { size: 11 } }, beginAtZero: false }
-        }
-      }
-    });
-    return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-  }, [activeLift, sessions]);
+  const last5=useMemo(()=>[...sessions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5),[sessions]);
 
-  // Last 5 sessions
-  const last5 = [...sessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-
-  if (sessions.length === 0) {
-    return (
-      <div className="empty-state">
-        <div className="emoji">📈</div>
-        <p>No sessions logged yet. Start a workout to see progress!</p>
-      </div>
-    );
+  function handleExport(){
+    const blob=new Blob([JSON.stringify(sessions,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`gym-backup-${todayStr()}.json`;a.click();
   }
 
-  return (
+  function handleImport(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=evt=>{
+      try{
+        const imp=JSON.parse(evt.target.result);
+        if(!Array.isArray(imp))throw new Error();
+        const merged=[...sessions];
+        for(const s of imp){const idx=merged.findIndex(x=>x.date===s.date&&x.wid===s.wid);if(idx>=0)merged[idx]=s;else merged.push(s);}
+        saveSessions(merged);window.location.reload();
+      }catch{alert('Invalid backup file.');}
+    };
+    reader.readAsText(file);e.target.value='';
+  }
+
+  if(sessions.length===0)return(
+    <div className="empty"><div className="emo">📈</div><p>No sessions yet.<br/>Log a workout to see progress!</p></div>
+  );
+
+  return(
     <div>
-      <div className="section-label">Select Lift</div>
-      <div className="lift-btns">
-        {allExercises.map(name => (
-          <button
-            key={name}
-            className={`lift-btn ${activeLift === name ? 'active' : ''}`}
-            onClick={() => setSelectedLift(name)}
-          >
-            {name}
-          </button>
-        ))}
+      {allEx.length>0&&<>
+        <div className="slabel">Lift Progress</div>
+        <div className="lift-btns">{allEx.map(n=><button key={n} className={`lift-btn${active===n?' active':''}`} onClick={()=>setSelLift(n)}>{n}</button>)}</div>
+        <div className="chart-wrap">{liftData.length>0?<canvas ref={chartRef}/>:<div className="no-data">No weight data for {active} yet.</div>}</div>
+      </>}
+
+      <div className="slabel">Recent Sessions</div>
+      {last5.map((s,i)=>{
+        const vol=calcVolume(s.exercises);
+        const isDel=confirmDel?.date===s.date&&confirmDel?.wid===s.wid;
+        return(
+          <div key={i} className="hist-item">
+            <div className="hist-top">
+              <div><div className="hist-date">{formatDate(s.date)}</div><div className="hist-name">{s.wname||s.wid}</div></div>
+              <div className="hist-vol">{vol.toLocaleString()} kg</div>
+            </div>
+            <div className="hist-actions">
+              <button className="edit-btn" onClick={()=>setEditing(s)}>✏️ Edit</button>
+              <button className="del-btn" onClick={()=>setConfirmDel({date:s.date,wid:s.wid})}>🗑 Delete</button>
+            </div>
+            {isDel&&<div className="confirm-del"><p>Delete this session permanently?</p><button className="cy" onClick={()=>{onDelete(s.date,s.wid);setConfirmDel(null);}}>Delete</button><button className="cn" onClick={()=>setConfirmDel(null)}>Cancel</button></div>}
+          </div>
+        );
+      })}
+
+      <div className="data-section">
+        <h3>Data Backup</h3>
+        <div className="data-btns">
+          <button className="data-btn" onClick={handleExport}>⬇️ Export</button>
+          <label className="data-btn" style={{cursor:'pointer'}}>⬆️ Import<input type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/></label>
+          <button className="data-btn danger" onClick={()=>window.confirm('Delete ALL data? Cannot be undone.')&&(saveSessions([]),window.location.reload())}>🗑 Clear</button>
+        </div>
       </div>
 
-      {activeLift && (
-        <>
-          <div className="chart-wrap">
-            {liftData.length > 0
-              ? <canvas ref={chartRef} />
-              : <div className="no-data">No weight data for {activeLift} yet.</div>
-            }
-          </div>
-        </>
-      )}
+      {editing&&<EditModal session={editing} onSave={s=>{onEdit(s);setEditing(null);}} onClose={()=>setEditing(null)}/>}
+    </div>
+  );
+}
 
-      <div className="session-history">
-        <h3>Last 5 Sessions</h3>
-        {last5.map((s, i) => {
-          const vol = calcVolume(s.exercises);
-          return (
-            <div key={i} className="history-item">
-              <div className="hi-left">
-                <div className="date">{formatDate(s.date)}</div>
-                <div className="wname">{s.wname || s.wid}</div>
+// ── Edit Modal ─────────────────────────────────────────────────────────────
+function EditModal({session,onSave,onClose}){
+  const [exercises,setEx]=useState(session.exercises.map(ex=>({...ex,sets:ex.sets.map(s=>({...s}))})));
+
+  function upd(ei,si,field,val){
+    setEx(p=>p.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[field]:val})}));
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-hdr">
+          <h3>Edit — {session.wname||session.wid}</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div style={{fontSize:12,color:'#888',marginBottom:12}}>{formatDate(session.date)}</div>
+        {exercises.map((ex,ei)=>(
+          <div key={ei} className="ex-block">
+            <div className="ex-head"><div className="ex-name">{ex.name}</div></div>
+            {ex.sets.map((set,si)=>(
+              <div key={si} className={`set-row${set.done?' done-set':''}`}>
+                <div className="set-num">S{set.set}</div>
+                <div className="wfield"><input className="winput" style={{flex:1}} type="number" inputMode="decimal" placeholder="kg" value={set.weight} onChange={e=>upd(ei,si,'weight',e.target.value)}/></div>
+                <input className="rinput" type="number" inputMode="numeric" value={set.reps} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
+                <button className={`tick${set.done?' ticked':''}`} onClick={()=>upd(ei,si,'done',!set.done)}>{set.done?'✓':''}</button>
               </div>
-              <div className="vol-badge">{vol.toLocaleString()} kg</div>
+            ))}
+          </div>
+        ))}
+        <button className="modal-save" onClick={()=>onSave({...session,exercises})}>Save Changes</button>
+      </div>
+    </div>
+  );
+}
+
+// ── PRs ────────────────────────────────────────────────────────────────────
+function PRsTab({sessions}){
+  const prs=useMemo(()=>getPRs(sessions),[sessions]);
+  const list=Object.entries(prs).sort((a,b)=>b[1].weight-a[1].weight);
+  if(list.length===0)return<div className="empty"><div className="emo">🏆</div><p>No PRs yet.<br/>Log your first workout to start tracking!</p></div>;
+  return(
+    <div>
+      <div className="slabel">Personal Records</div>
+      <div className="pr-grid">
+        {list.map(([name,pr])=>{
+          const e1rm=epley(pr.weight,pr.reps);
+          return(
+            <div key={name} className="pr-card">
+              <div className="pr-badge">PR</div>
+              <div className="pr-name">{name}</div>
+              <div><span className="pr-weight">{pr.weight}</span><span className="pr-unit">kg</span></div>
+              <div className="pr-reps">{pr.reps} reps</div>
+              {e1rm>pr.weight&&<div className="pr-1rm">~{e1rm}kg est. 1RM</div>}
+              <div className="pr-date">{formatDate(pr.date)}</div>
             </div>
           );
         })}
@@ -888,42 +658,12 @@ function ProgressTab({ sessions }) {
   );
 }
 
-// ── PRs Tab ────────────────────────────────────────────────────────────────
-function PRsTab({ sessions }) {
-  const prs = getPersonalRecords(sessions);
-  const prList = Object.entries(prs).sort((a, b) => b[1].weight - a[1].weight);
-
-  if (prList.length === 0) {
-    return (
-      <div className="empty-state">
-        <div className="emoji">🏆</div>
-        <p>No PRs yet. Log your first workout to start tracking personal records!</p>
-      </div>
-    );
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
   }
-
-  return (
-    <div>
-      <div className="section-label">Personal Records</div>
-      <div className="pr-grid">
-        {prList.map(([name, pr]) => (
-          <div key={name} className="pr-card">
-            <div className="pr-badge">PR</div>
-            <div className="pr-name">{name}</div>
-            <div>
-              <span className="pr-weight">{pr.weight}</span>
-              <span className="pr-unit"> kg</span>
-            </div>
-            <div className="pr-reps">{pr.reps} reps</div>
-            <div className="pr-date">{formatDate(pr.date)}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
