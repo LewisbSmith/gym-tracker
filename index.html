@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Gym Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    #root {
+      width: 100%;
+      max-width: 480px;
+      background: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      background: #04505e;
+      color: #fff;
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .header p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      background: #fff;
+      border-bottom: 2px solid #f0f0f0;
+      position: sticky;
+      top: 60px;
+      z-index: 99;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border: none;
+      background: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .nav-btn.active { color: #04505e; border-bottom: 2px solid #04505e; margin-bottom: -2px; }
+    .nav-btn svg { width: 18px; height: 18px; }
+
+    /* Content */
+    .content { flex: 1; padding: 16px; overflow-y: auto; }
+
+    /* Stat pills */
+    .stat-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .stat-pill {
+      flex: 1;
+      background: #f0f8f9;
+      border: 1px solid #d0eaed;
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-pill .val { font-size: 22px; font-weight: 700; color: #04505e; }
+    .stat-pill .lbl { font-size: 10px; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* Session grid */
+    .week-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .session-card {
+      border-radius: 10px;
+      padding: 14px 12px;
+      border: 2px solid #e8e8e8;
+      background: #fff;
+      position: relative;
+    }
+    .session-card.done { border-color: #1D9E75; background: #f0faf6; }
+    .session-card.today { border-color: #04505e; }
+    .session-card.today.done { border-color: #1D9E75; }
+    .session-card .day { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+    .session-card .name { font-size: 14px; font-weight: 700; color: #222; margin: 4px 0 2px; }
+    .session-card .sub { font-size: 11px; color: #888; }
+    .session-card .check { position: absolute; top: 10px; right: 10px; font-size: 18px; }
+    .today-banner {
+      background: #04505e;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .today-banner .info .lbl { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
+    .today-banner .info .name { font-size: 17px; font-weight: 700; margin-top: 2px; }
+    .start-btn {
+      background: #fff;
+      color: #04505e;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .done-banner {
+      background: #1D9E75;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    /* Workout picker */
+    .workout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .workout-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .workout-card:hover { border-color: #04505e; background: #f0f8f9; }
+    .workout-card .wname { font-size: 14px; font-weight: 700; color: #222; }
+    .workout-card .wtype { font-size: 11px; color: #04505e; font-weight: 600; margin-top: 2px; }
+    .workout-card .wcount { font-size: 11px; color: #888; margin-top: 4px; }
+
+    /* Log exercise */
+    .log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .back-btn {
+      background: none; border: none; cursor: pointer;
+      color: #04505e; font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .log-header h2 { font-size: 18px; font-weight: 700; color: #222; }
+    .exercise-block { margin-bottom: 16px; border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
+    .exercise-title {
+      background: #f8f8f8;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .exercise-title span { font-size: 11px; color: #888; font-weight: 400; }
+    .set-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr 40px;
+      gap: 8px;
+      padding: 8px 14px;
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+    }
+    .set-row.done-set { background: #f0faf6; }
+    .set-num { font-size: 12px; color: #888; font-weight: 600; text-align: center; }
+    .set-input {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      width: 100%;
+      text-align: center;
+      color: #222;
+    }
+    .set-input:focus { outline: none; border-color: #04505e; }
+    .set-label { font-size: 10px; color: #888; text-align: center; display: block; margin-top: 2px; }
+    .tick-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+    .tick-btn.ticked { border-color: #1D9E75; background: #1D9E75; color: #fff; }
+    .add-set-btn {
+      display: block;
+      width: 100%;
+      padding: 9px;
+      border: none;
+      background: #f8f8f8;
+      color: #04505e;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border-top: 1px solid #f0f0f0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .finish-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #04505e;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .finish-btn:disabled { background: #ccc; cursor: default; }
+    .completion-msg {
+      text-align: center;
+      padding: 32px 16px;
+    }
+    .completion-msg .emoji { font-size: 64px; margin-bottom: 12px; }
+    .completion-msg h2 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 8px; }
+    .completion-msg p { color: #666; font-size: 14px; margin-bottom: 8px; }
+    .completion-msg .vol { font-size: 18px; font-weight: 700; color: #04505e; }
+
+    /* Progress */
+    .lift-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .lift-btn {
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 2px solid #e8e8e8;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lift-btn.active { border-color: #04505e; background: #04505e; color: #fff; }
+    .chart-wrap { border: 1px solid #e8e8e8; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .chart-wrap canvas { max-height: 220px; }
+    .session-history h3 { font-size: 14px; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .history-item {
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-item .hi-left .date { font-size: 12px; color: #888; }
+    .history-item .hi-left .wname { font-size: 14px; font-weight: 700; color: #222; margin-top: 2px; }
+    .history-item .vol-badge {
+      background: #f0f8f9;
+      color: #04505e;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* PRs */
+    .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pr-card {
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      padding: 14px 12px;
+      position: relative;
+    }
+    .pr-card .pr-name { font-size: 13px; font-weight: 700; color: #222; margin-bottom: 8px; line-height: 1.3; }
+    .pr-card .pr-weight { font-size: 26px; font-weight: 700; color: #04505e; }
+    .pr-card .pr-unit { font-size: 13px; color: #888; }
+    .pr-card .pr-reps { font-size: 12px; color: #555; margin-top: 2px; }
+    .pr-card .pr-date { font-size: 11px; color: #aaa; margin-top: 6px; }
+    .pr-badge {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: #f59e0b;
+      color: #fff;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: #aaa;
+    }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f59e0b;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      z-index: 1000;
+      animation: fadeInOut 3s forwards;
+      white-space: nowrap;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .no-data { text-align: center; padding: 24px; color: #aaa; font-size: 13px; }
+    .section-label { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const WORKOUTS = [
+  {
+    id: 'upper-a', name: 'Upper A', type: 'Push', day: 'Mon',
+    exercises: [
+      { name: 'Bench press', sets: 4, reps: 8 },
+      { name: 'Overhead press', sets: 3, reps: 10 },
+      { name: 'Incline dumbbell press', sets: 3, reps: 10 },
+      { name: 'Lateral raises', sets: 3, reps: 15 },
+      { name: 'Tricep pushdowns', sets: 3, reps: 12 },
+    ]
+  },
+  {
+    id: 'upper-b', name: 'Upper B', type: 'Pull', day: 'Wed',
+    exercises: [
+      { name: 'Pull-ups / Lat pulldown', sets: 4, reps: 8 },
+      { name: 'Barbell row', sets: 4, reps: 8 },
+      { name: 'Cable row', sets: 3, reps: 10 },
+      { name: 'Face pulls', sets: 3, reps: 15 },
+      { name: 'Barbell curl', sets: 3, reps: 10 },
+    ]
+  },
+  {
+    id: 'lower-a', name: 'Lower A', type: 'Quads', day: 'Fri',
+    exercises: [
+      { name: 'Barbell squat', sets: 4, reps: 6 },
+      { name: 'Leg press', sets: 3, reps: 10 },
+      { name: 'Bulgarian split squat', sets: 3, reps: 10 },
+      { name: 'Leg extension', sets: 3, reps: 15 },
+      { name: 'Calf raise', sets: 4, reps: 15 },
+    ]
+  },
+  {
+    id: 'lower-b', name: 'Lower B', type: 'Hinge', day: 'Sat',
+    exercises: [
+      { name: 'Romanian deadlift', sets: 4, reps: 8 },
+      { name: 'Leg curl', sets: 3, reps: 12 },
+      { name: 'Hip thrust', sets: 4, reps: 10 },
+      { name: 'Walking lunges', sets: 3, reps: 12 },
+      { name: 'Calf raise', sets: 4, reps: 15 },
+    ]
+  },
+];
+
+const SESSION_DAYS = ['Mon', 'Wed', 'Fri', 'Sat'];
+const DAY_MAP = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+
+function toDateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+function todayStr() { return toDateStr(new Date()); }
+
+function getMondayOfWeek(d) {
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day);
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return toDateStr(mon);
+}
+
+function getWeekDates(mondayStr) {
+  const mon = new Date(mondayStr);
+  return {
+    Mon: toDateStr(mon),
+    Wed: toDateStr(new Date(mon.getTime() + 2 * 86400000)),
+    Fri: toDateStr(new Date(mon.getTime() + 4 * 86400000)),
+    Sat: toDateStr(new Date(mon.getTime() + 5 * 86400000)),
+  };
+}
+
+function getTodayDayAbbr() {
+  const d = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  return d;
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function calcVolume(exercises) {
+  return exercises.reduce((total, ex) => {
+    return total + ex.sets.reduce((s, set) => {
+      if (!set.done) return s;
+      return s + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
+    }, 0);
+  }, 0);
+}
+
+// ── Storage ────────────────────────────────────────────────────────────────
+function loadSessions() {
+  try { return JSON.parse(localStorage.getItem('gym_sessions') || '[]'); }
+  catch { return []; }
+}
+function saveSessions(sessions) {
+  localStorage.setItem('gym_sessions', JSON.stringify(sessions));
+}
+
+// ── Stats helpers ──────────────────────────────────────────────────────────
+function computeStats(sessions) {
+  const today = todayStr();
+  const thisWeekMon = getMondayOfWeek(new Date());
+  const thisWeekDates = getWeekDates(thisWeekMon);
+
+  const sessionsThisWeek = sessions.filter(s =>
+    Object.values(thisWeekDates).includes(s.date)
+  ).length;
+
+  // Streak: count consecutive weeks (going back) where >= 4 sessions logged
+  let streak = 0;
+  let checkMon = thisWeekMon;
+  while (true) {
+    const wDates = Object.values(getWeekDates(checkMon));
+    const count = sessions.filter(s => wDates.includes(s.date)).length;
+    if (count >= 4) {
+      streak++;
+      const m = new Date(checkMon);
+      m.setDate(m.getDate() - 7);
+      checkMon = toDateStr(m);
+    } else break;
+  }
+
+  return { streak, sessionsThisWeek, total: sessions.length };
+}
+
+function getPersonalRecords(sessions) {
+  const prs = {};
+  for (const session of sessions) {
+    for (const ex of session.exercises) {
+      for (const set of ex.sets) {
+        if (!set.done || !set.weight) continue;
+        const w = parseFloat(set.weight);
+        const r = parseInt(set.reps);
+        if (!prs[ex.name] || w > prs[ex.name].weight || (w === prs[ex.name].weight && r > prs[ex.name].reps)) {
+          prs[ex.name] = { weight: w, reps: r, date: session.date, wid: session.wid };
+        }
+      }
+    }
+  }
+  return prs;
+}
+
+function detectNewPRs(oldSessions, newSession, existingPRs) {
+  const newPRNames = [];
+  for (const ex of newSession.exercises) {
+    for (const set of ex.sets) {
+      if (!set.done || !set.weight) continue;
+      const w = parseFloat(set.weight);
+      const r = parseInt(set.reps);
+      const old = existingPRs[ex.name];
+      if (!old || w > old.weight) {
+        if (!newPRNames.includes(ex.name)) newPRNames.push(ex.name);
+      }
+    }
+  }
+  return newPRNames;
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState('home');
+  const [sessions, setSessions] = useState(loadSessions);
+  const [toast, setToast] = useState(null);
+  const [toastKey, setToastKey] = useState(0);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setToastKey(k => k + 1);
+    setTimeout(() => setToast(null), 3100);
+  }, []);
+
+  const addSession = useCallback((session) => {
+    setSessions(prev => {
+      const existingPRs = getPersonalRecords(prev);
+      const newPRNames = detectNewPRs(prev, session, existingPRs);
+      const updated = [...prev.filter(s => s.date !== session.date || s.wid !== session.wid), session];
+      saveSessions(updated);
+      if (newPRNames.length > 0) {
+        setTimeout(() => showToast(`🏆 New PR${newPRNames.length > 1 ? 's' : ''}: ${newPRNames.slice(0,2).join(', ')}${newPRNames.length > 2 ? '…' : ''}`), 300);
+      }
+      return updated;
+    });
+  }, [showToast]);
+
+  const today = getTodayDayAbbr();
+  const todayWorkout = WORKOUTS.find(w => w.day === today);
+
+  return (
+    <div>
+      <div className="header">
+        <h1>💪 Gym Tracker</h1>
+        <p>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      </div>
+      <nav className="nav">
+        {[
+          { id: 'home', label: 'Home', icon: '🏠' },
+          { id: 'log', label: 'Log', icon: '📝' },
+          { id: 'progress', label: 'Progress', icon: '📈' },
+          { id: 'prs', label: 'PRs', icon: '🏆' },
+        ].map(t => (
+          <button key={t.id} className={`nav-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+            <span>{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      <div className="content">
+        {tab === 'home' && <HomeTab sessions={sessions} todayWorkout={todayWorkout} onStart={() => setTab('log')} />}
+        {tab === 'log' && <LogTab sessions={sessions} onSave={addSession} todayWorkout={todayWorkout} />}
+        {tab === 'progress' && <ProgressTab sessions={sessions} />}
+        {tab === 'prs' && <PRsTab sessions={sessions} />}
+      </div>
+      {toast && <div key={toastKey} className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+// ── Home Tab ───────────────────────────────────────────────────────────────
+function HomeTab({ sessions, todayWorkout, onStart }) {
+  const stats = computeStats(sessions);
+  const today = todayStr();
+  const todayDone = sessions.some(s => s.date === today);
+  const thisWeekMon = getMondayOfWeek(new Date());
+  const weekDates = getWeekDates(thisWeekMon);
+  const todayDay = getTodayDayAbbr();
+
+  return (
+    <div>
+      <div className="stat-row">
+        <div className="stat-pill">
+          <div className="val">🔥 {stats.streak}</div>
+          <div className="lbl">Week Streak</div>
+        </div>
+        <div className="stat-pill">
+          <div className="val">{stats.sessionsThisWeek}/4</div>
+          <div className="lbl">This Week</div>
+        </div>
+        <div className="stat-pill">
+          <div className="val">{stats.total}</div>
+          <div className="lbl">All Time</div>
+        </div>
+      </div>
+
+      {todayWorkout && !todayDone && (
+        <div className="today-banner">
+          <div className="info">
+            <div className="lbl">Today's Session</div>
+            <div className="name">{todayWorkout.name} · {todayWorkout.type}</div>
+          </div>
+          <button className="start-btn" onClick={onStart}>Start →</button>
+        </div>
+      )}
+      {todayDone && (
+        <div className="done-banner">✅ Today's session logged — great work!</div>
+      )}
+      {!todayWorkout && (
+        <div className="done-banner" style={{ background: '#888' }}>Rest day — no session scheduled today.</div>
+      )}
+
+      <div className="section-label">This Week</div>
+      <div className="week-grid">
+        {WORKOUTS.map(w => {
+          const date = weekDates[w.day];
+          const done = sessions.some(s => s.date === date);
+          const isToday = w.day === todayDay;
+          return (
+            <div key={w.id} className={`session-card ${done ? 'done' : ''} ${isToday ? 'today' : ''}`}>
+              <div className="day">{w.day} {isToday ? '· Today' : ''}</div>
+              <div className="name">{w.name}</div>
+              <div className="sub">{w.type} · {w.exercises.length} exercises</div>
+              <div className="check">{done ? '✅' : ''}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Log Tab ────────────────────────────────────────────────────────────────
+function LogTab({ sessions, onSave, todayWorkout }) {
+  const [selected, setSelected] = useState(null);
+  const [logState, setLogState] = useState(null);
+  const [done, setDone] = useState(false);
+  const [finalVol, setFinalVol] = useState(0);
+
+  function startWorkout(workout) {
+    const exercises = workout.exercises.map(ex => ({
+      name: ex.name,
+      targetSets: ex.sets,
+      targetReps: ex.reps,
+      sets: Array.from({ length: ex.sets }, (_, i) => ({
+        set: i + 1,
+        weight: '',
+        reps: ex.reps,
+        done: false,
+      }))
+    }));
+    setLogState({ workout, exercises });
+    setSelected(workout);
+    setDone(false);
+  }
+
+  function updateSet(exIdx, setIdx, field, value) {
+    setLogState(prev => {
+      const exercises = prev.exercises.map((ex, ei) => {
+        if (ei !== exIdx) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((s, si) => si === setIdx ? { ...s, [field]: value } : s)
+        };
+      });
+      return { ...prev, exercises };
+    });
+  }
+
+  function toggleSet(exIdx, setIdx) {
+    updateSet(exIdx, setIdx, 'done', !logState.exercises[exIdx].sets[setIdx].done);
+  }
+
+  function addSet(exIdx) {
+    setLogState(prev => {
+      const exercises = prev.exercises.map((ex, ei) => {
+        if (ei !== exIdx) return ex;
+        const newSet = { set: ex.sets.length + 1, weight: ex.sets[ex.sets.length - 1]?.weight || '', reps: ex.targetReps, done: false };
+        return { ...ex, sets: [...ex.sets, newSet] };
+      });
+      return { ...prev, exercises };
+    });
+  }
+
+  function finishWorkout() {
+    const session = {
+      date: todayStr(),
+      wid: logState.workout.id,
+      wname: logState.workout.name,
+      exercises: logState.exercises.map(ex => ({
+        name: ex.name,
+        sets: ex.sets.map(s => ({ ...s }))
+      }))
+    };
+    const vol = calcVolume(session.exercises);
+    setFinalVol(vol);
+    onSave(session);
+    setDone(true);
+  }
+
+  if (done) {
+    return (
+      <div className="completion-msg">
+        <div className="emoji">🎉</div>
+        <h2>{logState.workout.name} Complete!</h2>
+        <p>Session saved successfully.</p>
+        <div className="vol">Total Volume: {finalVol.toLocaleString()} kg</div>
+        <br />
+        <button className="finish-btn" onClick={() => { setSelected(null); setLogState(null); setDone(false); }}>
+          Log Another
+        </button>
+      </div>
+    );
+  }
+
+  if (logState) {
+    const allDone = logState.exercises.every(ex => ex.sets.some(s => s.done));
+    return (
+      <div>
+        <div className="log-header">
+          <button className="back-btn" onClick={() => { setLogState(null); setSelected(null); }}>← Back</button>
+          <h2>{logState.workout.name}</h2>
+        </div>
+        {logState.exercises.map((ex, ei) => (
+          <div key={ei} className="exercise-block">
+            <div className="exercise-title">
+              {ex.name}
+              <span>Target: {ex.targetSets}×{ex.targetReps}</span>
+            </div>
+            {ex.sets.map((set, si) => (
+              <div key={si} className={`set-row ${set.done ? 'done-set' : ''}`}>
+                <div className="set-num">#{set.set}</div>
+                <div>
+                  <input
+                    className="set-input"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="kg"
+                    value={set.weight}
+                    onChange={e => updateSet(ei, si, 'weight', e.target.value)}
+                  />
+                  <span className="set-label">kg</span>
+                </div>
+                <div>
+                  <input
+                    className="set-input"
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="reps"
+                    value={set.reps}
+                    onChange={e => updateSet(ei, si, 'reps', e.target.value)}
+                  />
+                  <span className="set-label">reps</span>
+                </div>
+                <button
+                  className={`tick-btn ${set.done ? 'ticked' : ''}`}
+                  onClick={() => toggleSet(ei, si)}
+                >
+                  {set.done ? '✓' : ''}
+                </button>
+              </div>
+            ))}
+            <button className="add-set-btn" onClick={() => addSet(ei)}>+ Add Set</button>
+          </div>
+        ))}
+        <button className="finish-btn" onClick={finishWorkout}>
+          Finish Workout
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="section-label">Choose Workout</div>
+      <div className="workout-grid">
+        {WORKOUTS.map(w => (
+          <div key={w.id} className="workout-card" onClick={() => startWorkout(w)}>
+            <div className="wname">{w.name}</div>
+            <div className="wtype">{w.type}</div>
+            <div className="wcount">{w.exercises.length} exercises · {w.day}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Progress Tab ───────────────────────────────────────────────────────────
+function ProgressTab({ sessions }) {
+  const [selectedLift, setSelectedLift] = useState(null);
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  // All unique exercise names from logged sessions
+  const allExercises = [...new Set(
+    sessions.flatMap(s => s.exercises.map(e => e.name))
+  )].sort();
+
+  // Auto-select first if available
+  const activeLift = selectedLift || allExercises[0] || null;
+
+  // Chart data for selected lift
+  const liftData = sessions
+    .filter(s => s.exercises.some(e => e.name === activeLift))
+    .map(s => {
+      const ex = s.exercises.find(e => e.name === activeLift);
+      const maxW = Math.max(...ex.sets.filter(st => st.done && st.weight).map(st => parseFloat(st.weight) || 0));
+      return { date: s.date, maxW: maxW > 0 ? maxW : null };
+    })
+    .filter(d => d.maxW !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  useEffect(() => {
+    if (!chartRef.current || !activeLift) return;
+    if (chartInstance.current) { chartInstance.current.destroy(); }
+    if (liftData.length === 0) return;
+    chartInstance.current = new Chart(chartRef.current, {
+      type: 'line',
+      data: {
+        labels: liftData.map(d => formatDate(d.date)),
+        datasets: [{
+          label: 'Max Weight (kg)',
+          data: liftData.map(d => d.maxW),
+          borderColor: '#04505e',
+          backgroundColor: 'rgba(4,80,94,0.08)',
+          pointBackgroundColor: '#04505e',
+          pointRadius: 5,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { font: { size: 10 }, maxRotation: 30 } },
+          y: { ticks: { font: { size: 11 } }, beginAtZero: false }
+        }
+      }
+    });
+    return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+  }, [activeLift, sessions]);
+
+  // Last 5 sessions
+  const last5 = [...sessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+  if (sessions.length === 0) {
+    return (
+      <div className="empty-state">
+        <div className="emoji">📈</div>
+        <p>No sessions logged yet. Start a workout to see progress!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="section-label">Select Lift</div>
+      <div className="lift-btns">
+        {allExercises.map(name => (
+          <button
+            key={name}
+            className={`lift-btn ${activeLift === name ? 'active' : ''}`}
+            onClick={() => setSelectedLift(name)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      {activeLift && (
+        <>
+          <div className="chart-wrap">
+            {liftData.length > 0
+              ? <canvas ref={chartRef} />
+              : <div className="no-data">No weight data for {activeLift} yet.</div>
+            }
+          </div>
+        </>
+      )}
+
+      <div className="session-history">
+        <h3>Last 5 Sessions</h3>
+        {last5.map((s, i) => {
+          const vol = calcVolume(s.exercises);
+          return (
+            <div key={i} className="history-item">
+              <div className="hi-left">
+                <div className="date">{formatDate(s.date)}</div>
+                <div className="wname">{s.wname || s.wid}</div>
+              </div>
+              <div className="vol-badge">{vol.toLocaleString()} kg</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── PRs Tab ────────────────────────────────────────────────────────────────
+function PRsTab({ sessions }) {
+  const prs = getPersonalRecords(sessions);
+  const prList = Object.entries(prs).sort((a, b) => b[1].weight - a[1].weight);
+
+  if (prList.length === 0) {
+    return (
+      <div className="empty-state">
+        <div className="emoji">🏆</div>
+        <p>No PRs yet. Log your first workout to start tracking personal records!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="section-label">Personal Records</div>
+      <div className="pr-grid">
+        {prList.map(([name, pr]) => (
+          <div key={name} className="pr-card">
+            <div className="pr-badge">PR</div>
+            <div className="pr-name">{name}</div>
+            <div>
+              <span className="pr-weight">{pr.weight}</span>
+              <span className="pr-unit"> kg</span>
+            </div>
+            <div className="pr-reps">{pr.reps} reps</div>
+            <div className="pr-date">{formatDate(pr.date)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
