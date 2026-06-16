@@ -385,13 +385,18 @@ function App(){
     const SYNC_CODE = "Lewis-Gym-2026";
     initFirebase(FIREBASE_CONFIG, SYNC_CODE).then(ok=>{
       if(!ok){setSyncStatus('err');return;}
+      const local=loadSessions();
       fetchCloudSessions().then(cloud=>{
-        if(cloud){
-          setSessions(prev=>{
-            const merged=mergeSessions(prev,cloud);
-            saveSessions(merged);
-            return merged;
-          });
+        const cloudList=cloud||[];
+        const merged=mergeSessions(local,cloudList);
+        saveSessions(merged);
+        setSessions(merged);
+        // Push any local sessions that aren't in the cloud yet
+        const cloudKeys=new Set(cloudList.map(s=>`${s.date}_${s.wid}`));
+        const toUpload=merged.filter(s=>!cloudKeys.has(`${s.date}_${s.wid}`));
+        if(toUpload.length>0){
+          console.log(`Syncing ${toUpload.length} local session(s) to Firebase…`);
+          Promise.all(toUpload.map(pushSession)).catch(()=>{});
         }
         setSyncStatus('ok');
       }).catch(()=>setSyncStatus('err'));
