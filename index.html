@@ -367,12 +367,18 @@ function App(){
 
   const showToast=useCallback((msg)=>{setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),3100);},[]);
 
-  // Init Firebase from saved config on startup
+  // Init Firebase on startup (hardcoded config)
   useEffect(()=>{
-    const cfg=localStorage.getItem('gym_fb_config');
-    const code=localStorage.getItem('gym_sync_code');
-    if(!cfg||!code)return;
-    initFirebase(cfg,code).then(ok=>{
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAwQ0LwKHXRQ9-kx1j7DH_0_66eS_tiAMg",
+      authDomain: "gym-app-ecf7a.firebaseapp.com",
+      projectId: "gym-app-ecf7a",
+      storageBucket: "gym-app-ecf7a.firebasestorage.app",
+      messagingSenderId: "412101802398",
+      appId: "1:412101802398:web:12209de8b5ace0fda83e8f"
+    };
+    const SYNC_CODE = "Lewis-Gym-2026";
+    initFirebase(FIREBASE_CONFIG, SYNC_CODE).then(ok=>{
       if(!ok){setSyncStatus('err');return;}
       fetchCloudSessions().then(cloud=>{
         if(cloud){
