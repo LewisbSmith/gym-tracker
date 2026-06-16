@@ -241,17 +241,22 @@ function parseFirebaseConfig(raw) {
   return null;
 }
 
-async function initFirebase(configStr, code) {
+async function initFirebase(config, code) {
   try {
-    const config = parseFirebaseConfig(configStr);
+    // config must be a plain object — never run it through JSON.parse
+    if (typeof config === 'string') config = parseFirebaseConfig(config);
     const required = ['apiKey','authDomain','projectId','appId'];
-    if (!config || required.some(k => !config[k])) return false;
+    if (!config || required.some(k => !config[k])) {
+      console.error('Firebase init: missing required fields', config);
+      return false;
+    }
     if (firebase.apps.length > 0) {
       await Promise.all(firebase.apps.map(a => a.delete()));
     }
     firebase.initializeApp(config);
     _db = firebase.firestore();
     _syncCode = code;
+    console.log('Firebase init: connected to project', config.projectId, '| syncCode:', code);
     return true;
   } catch(e) {
     console.error('Firebase init:', e);
