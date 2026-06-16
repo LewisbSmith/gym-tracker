@@ -552,10 +552,7 @@ function LogTab({sessions,onSave}){
         <button className="back-btn" onClick={()=>setPhase('pick')}>← Back</button>
         <span className="log-title">{ls.workout.name}</span>
       </div>
-      <div className="date-row">
-        <label>📅 Date</label>
-        <input className="date-input" type="date" value={logDate} max={todayStr()} onChange={e=>setLogDate(e.target.value)}/>
-      </div>
+
       {ls.exercises.map((ex,ei)=>{
         const prevBest=(()=>{
           const ws=ex.prevSets.filter(s=>s.weight).map(s=>parseFloat(s.weight)||0);
@@ -597,6 +594,10 @@ function LogTab({sessions,onSave}){
 
   return(
     <div>
+      <div className="date-row" style={{marginBottom:14}}>
+        <label>📅 Session Date</label>
+        <input className="date-input" type="date" value={logDate} max={todayStr()} onChange={e=>setLogDate(e.target.value)}/>
+      </div>
       <div className="slabel">Choose Workout</div>
       <div className="workout-grid">
         {WORKOUTS.map(w=>(
