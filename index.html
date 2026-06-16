@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="Gym Tracker" />
   <link rel="manifest" href="./manifest.json" />
   <title>Gym Tracker</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -16,20 +18,24 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; justify-content: center; }
-    #root { width: 100%; max-width: 480px; background: #fff; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+    #root { width: 100%; max-width: 480px; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header */
-    .header { background: #04505e; color: #fff; padding: 14px 20px; position: sticky; top: 0; z-index: 100; }
+    .header { background: #04505e; color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 100; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; }
     .header h1 { font-size: 20px; font-weight: 700; }
     .header p { font-size: 12px; opacity: 0.7; margin-top: 1px; }
+    .settings-btn { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.85); font-size: 22px; padding: 0; position: relative; line-height: 1; }
+    .sync-dot { font-size: 9px; position: absolute; top: -2px; right: -3px; }
+    .sync-ok { color: #4ade80; }
+    .sync-err { color: #f87171; }
 
-    /* Bottom Nav */
+    /* Nav */
     .nav { display: flex; background: #fff; border-top: 1px solid #e8e8e8; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 100; }
     .nav-btn { flex: 1; padding: 10px 4px 12px; border: none; background: none; font-size: 11px; font-weight: 600; color: #aaa; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
     .nav-btn .ni { font-size: 20px; line-height: 1; }
     .nav-btn.active { color: #04505e; }
 
-    /* Content */
     .content { flex: 1; padding: 16px; padding-bottom: 82px; }
 
     /* Stat pills */
@@ -38,7 +44,7 @@
     .stat-pill .val { font-size: 20px; font-weight: 700; color: #04505e; }
     .stat-pill .lbl { font-size: 10px; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
 
-    /* Today card */
+    /* Home cards */
     .today-card { background: #04505e; color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
     .today-card .tc-lbl { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
     .today-card .tc-name { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
@@ -64,22 +70,26 @@
     .day-card .dc-chk { font-size: 14px; margin-top: 4px; }
     .t-push { color: #e05a2b; } .t-pull { color: #2563eb; } .t-quads { color: #7c3aed; } .t-hinge { color: #0891b2; }
 
-    /* Section label */
-    .slabel { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-
     /* Workout picker */
+    .slabel { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
     .workout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .workout-card { border: 2px solid #e8e8e8; border-radius: 10px; padding: 14px 12px; cursor: pointer; transition: border-color 0.15s; }
+    .workout-card { border: 2px solid #e8e8e8; border-radius: 10px; padding: 14px 12px; cursor: pointer; }
     .workout-card:active { border-color: #04505e; background: #f0f8f9; }
     .wc-name { font-size: 15px; font-weight: 700; color: #222; }
     .wc-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
     .wc-meta { font-size: 11px; color: #888; margin-top: 4px; }
 
     /* Log */
-    .log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .back-btn { background: none; border: none; cursor: pointer; color: #04505e; font-size: 14px; font-weight: 600; padding: 0; }
+    .log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .back-btn { background: none; border: none; cursor: pointer; color: #04505e; font-size: 14px; font-weight: 600; padding: 0; white-space: nowrap; }
     .log-title { font-size: 18px; font-weight: 700; color: #222; }
 
+    /* Date picker row */
+    .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; background: #f8f8f8; border-radius: 8px; padding: 10px 12px; }
+    .date-row label { font-size: 12px; font-weight: 700; color: #555; white-space: nowrap; }
+    .date-input { border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; font-size: 13px; color: #222; flex: 1; background: #fff; }
+
+    /* Exercises */
     .ex-block { margin-bottom: 12px; border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
     .ex-head { background: #f8f8f8; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
     .ex-head-row { display: flex; justify-content: space-between; align-items: baseline; }
@@ -91,7 +101,7 @@
     .set-row.done-set { background: #f0faf6; }
     .set-num { font-size: 11px; color: #aaa; font-weight: 700; text-align: center; }
     .wfield { display: flex; align-items: center; gap: 2px; }
-    .adj { width: 26px; height: 32px; border: 1px solid #ddd; background: #f8f8f8; border-radius: 5px; font-size: 16px; font-weight: 700; color: #444; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .adj { width: 26px; height: 34px; border: 1px solid #ddd; background: #f8f8f8; border-radius: 5px; font-size: 16px; font-weight: 700; color: #444; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .adj:active { background: #e0e0e0; }
     .winput { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 6px 2px; font-size: 14px; font-weight: 700; text-align: center; color: #222; min-width: 0; }
     .winput:focus { outline: none; border-color: #04505e; }
@@ -117,7 +127,6 @@
     .confirm-btn { display: block; width: 100%; padding: 15px; background: #1D9E75; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
     .cancel-btn { display: block; width: 100%; padding: 12px; background: #f8f8f8; color: #555; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
 
-    /* Completion */
     .completion { text-align: center; padding: 40px 16px; }
     .completion .emo { font-size: 64px; margin-bottom: 12px; }
     .completion h2 { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 6px; }
@@ -144,20 +153,34 @@
     .cy { background: #e53e3e; color: #fff; }
     .cn { background: #f0f0f0; color: #555; }
 
-    /* Data */
     .data-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8e8e8; }
-    .data-section h3 { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .data-section h3 { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
     .data-btns { display: flex; gap: 8px; }
     .data-btn { flex: 1; padding: 10px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #f8f8f8; color: #333; text-align: center; }
     .data-btn.danger { color: #e53e3e; border-color: #fed7d7; background: #fff5f5; }
 
-    /* Modal */
+    /* Modal (shared) */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
-    .modal { background: #fff; width: 100%; max-width: 480px; max-height: 88vh; border-radius: 16px 16px 0 0; padding: 20px 16px 32px; overflow-y: auto; }
-    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal { background: #fff; width: 100%; max-width: 480px; max-height: 90vh; border-radius: 16px 16px 0 0; padding: 20px 16px 32px; overflow-y: auto; }
+    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .modal-hdr h3 { font-size: 17px; font-weight: 700; color: #222; }
     .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #888; }
     .modal-save { display: block; width: 100%; padding: 14px; background: #04505e; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+    .modal-save:disabled { background: #bbb; cursor: default; }
+
+    /* Settings modal */
+    .settings-h4 { font-size: 14px; font-weight: 700; color: #222; margin-bottom: 6px; }
+    .settings-desc { font-size: 12px; color: #666; line-height: 1.6; margin-bottom: 12px; }
+    .setup-steps { background: #f8f8f8; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 2; }
+    .setup-steps strong { color: #222; }
+    .settings-lbl { display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px; margin-top: 10px; }
+    .settings-lbl span { font-weight: 400; color: #888; }
+    .settings-ta { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 11px; font-family: monospace; resize: vertical; color: #333; min-height: 110px; }
+    .settings-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 14px; color: #333; }
+    .settings-ok { background: #f0faf6; border: 1px solid #1D9E75; color: #1D9E75; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-top: 12px; }
+    .settings-err { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-top: 12px; }
+    .disconnect-btn { display: block; width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ddd; border-radius: 8px; background: none; color: #888; font-size: 13px; cursor: pointer; }
+    .divider { border: none; border-top: 1px solid #e8e8e8; margin: 18px 0; }
 
     /* PRs */
     .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -170,19 +193,65 @@
     .pr-1rm { font-size: 11px; color: #04505e; font-weight: 600; margin-top: 3px; }
     .pr-date { font-size: 11px; color: #bbb; margin-top: 5px; }
 
-    /* Empty / misc */
     .empty { text-align: center; padding: 48px 16px; color: #aaa; }
     .empty .emo { font-size: 48px; margin-bottom: 12px; }
     .empty p { font-size: 14px; line-height: 1.6; }
     .no-data { text-align: center; padding: 20px; color: #bbb; font-size: 13px; }
 
-    /* Toast */
     .toast { position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; z-index: 300; animation: fio 3s forwards; white-space: nowrap; max-width: 90%; }
     @keyframes fio { 0%{opacity:0;transform:translateX(-50%) translateY(8px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 75%{opacity:1} 100%{opacity:0} }
   </style>
 </head>
 <body>
 <div id="root"></div>
+<script>
+// ── Firebase module (outside React) ────────────────────────────────────────
+let _db = null;
+let _syncCode = null;
+
+async function initFirebase(configStr, code) {
+  try {
+    const config = typeof configStr === 'string' ? JSON.parse(configStr) : configStr;
+    if (firebase.apps.length > 0) {
+      await Promise.all(firebase.apps.map(a => a.delete()));
+    }
+    firebase.initializeApp(config);
+    _db = firebase.firestore();
+    _syncCode = code;
+    return true;
+  } catch(e) {
+    console.error('Firebase init:', e);
+    return false;
+  }
+}
+
+async function pushSession(session) {
+  if (!_db || !_syncCode) return;
+  const id = `${session.date}_${session.wid}`;
+  await _db.collection(`gym/${_syncCode}/sessions`).doc(id).set(session);
+}
+
+async function removeCloudSession(date, wid) {
+  if (!_db || !_syncCode) return;
+  await _db.collection(`gym/${_syncCode}/sessions`).doc(`${date}_${wid}`).delete();
+}
+
+async function fetchCloudSessions() {
+  if (!_db || !_syncCode) return null;
+  const snap = await _db.collection(`gym/${_syncCode}/sessions`).get();
+  return snap.docs.map(d => d.data());
+}
+
+function mergeSessions(local, cloud) {
+  const merged = [...local];
+  for (const s of cloud) {
+    const idx = merged.findIndex(x => x.date === s.date && x.wid === s.wid);
+    if (idx >= 0) merged[idx] = s;
+    else merged.push(s);
+  }
+  return merged.sort((a, b) => b.date.localeCompare(a.date));
+}
+</script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
@@ -208,12 +277,13 @@ const TYPE_CLS = {Push:'t-push',Pull:'t-pull',Quads:'t-quads',Hinge:'t-hinge'};
 
 function toDateStr(d){return d.toISOString().split('T')[0];}
 function todayStr(){return toDateStr(new Date());}
-function getMondayOfWeek(d){const day=d.getDay();const diff=day===0?-6:1-day;const m=new Date(d);m.setDate(d.getDate()+diff);return toDateStr(m);}
+function getMondayOfWeek(d){const day=d.getDay();const m=new Date(d);m.setDate(d.getDate()+(day===0?-6:1-day));return toDateStr(m);}
 function getWeekDates(mon){const m=new Date(mon+'T00:00:00');return{Mon:toDateStr(m),Wed:toDateStr(new Date(m.getTime()+2*86400000)),Fri:toDateStr(new Date(m.getTime()+4*86400000)),Sat:toDateStr(new Date(m.getTime()+5*86400000))};}
 function getTodayDay(){return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];}
-function formatDate(s){if(!s)return'';const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+function formatDate(s){if(!s)return'';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
 function calcVolume(exercises){return exercises.reduce((t,ex)=>t+ex.sets.reduce((s,set)=>set.done?s+(parseFloat(set.weight)||0)*(parseInt(set.reps)||0):s,0),0);}
 function epley(w,r){if(!w||!r)return 0;return r===1?w:Math.round(w*(1+r/30)*10)/10;}
+const sel = e => e.target.select(); // select-all on focus helper
 
 function loadSessions(){try{return JSON.parse(localStorage.getItem('gym_sessions')||'[]');}catch{return[];}}
 function saveSessions(s){localStorage.setItem('gym_sessions',JSON.stringify(s));}
@@ -258,14 +328,37 @@ function App(){
   const [sessions,setSessions]=useState(loadSessions);
   const [toast,setToast]=useState(null);
   const [toastKey,setToastKey]=useState(0);
+  const [showSettings,setShowSettings]=useState(false);
+  const [syncStatus,setSyncStatus]=useState('off'); // off | ok | err
 
   const showToast=useCallback((msg)=>{setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),3100);},[]);
+
+  // Init Firebase from saved config on startup
+  useEffect(()=>{
+    const cfg=localStorage.getItem('gym_fb_config');
+    const code=localStorage.getItem('gym_sync_code');
+    if(!cfg||!code)return;
+    initFirebase(cfg,code).then(ok=>{
+      if(!ok){setSyncStatus('err');return;}
+      fetchCloudSessions().then(cloud=>{
+        if(cloud){
+          setSessions(prev=>{
+            const merged=mergeSessions(prev,cloud);
+            saveSessions(merged);
+            return merged;
+          });
+        }
+        setSyncStatus('ok');
+      }).catch(()=>setSyncStatus('err'));
+    });
+  },[]);
 
   const addSession=useCallback((session)=>{
     setSessions(prev=>{
       const prs=detectNewPRs(prev,session);
-      const next=[...prev.filter(s=>!(s.date===session.date&&s.wid===session.wid)),session];
+      const next=mergeSessions(prev,[session]);
       saveSessions(next);
+      pushSession(session).catch(()=>{}); // async, non-blocking
       if(prs.length>0)setTimeout(()=>showToast(`🏆 New PR${prs.length>1?'s':''}: ${prs.slice(0,2).join(', ')}${prs.length>2?'…':''}`),200);
       return next;
     });
@@ -273,11 +366,13 @@ function App(){
 
   const deleteSession=useCallback((date,wid)=>{
     setSessions(prev=>{const next=prev.filter(s=>!(s.date===date&&s.wid===wid));saveSessions(next);return next;});
+    removeCloudSession(date,wid).catch(()=>{});
     showToast('Session deleted');
   },[showToast]);
 
   const editSession=useCallback((updated)=>{
     setSessions(prev=>{const next=prev.map(s=>s.date===updated.date&&s.wid===updated.wid?updated:s);saveSessions(next);return next;});
+    pushSession(updated).catch(()=>{});
     showToast('Session updated ✓');
   },[showToast]);
 
@@ -287,8 +382,17 @@ function App(){
   return(
     <div>
       <div className="header">
-        <h1>💪 Gym Tracker</h1>
-        <p>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
+        <div className="header-row">
+          <div>
+            <h1>💪 Gym Tracker</h1>
+            <p>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
+          </div>
+          <button className="settings-btn" onClick={()=>setShowSettings(true)} aria-label="Settings">
+            ⚙️
+            {syncStatus==='ok'&&<span className="sync-dot sync-ok">●</span>}
+            {syncStatus==='err'&&<span className="sync-dot sync-err">●</span>}
+          </button>
+        </div>
       </div>
       <div className="content">
         {tab==='home'&&<HomeTab sessions={sessions} todayWorkout={todayWorkout} onStart={()=>setTab('log')}/>}
@@ -304,6 +408,7 @@ function App(){
         ))}
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
+      {showSettings&&<SettingsModal onClose={()=>setShowSettings(false)} onConnected={()=>setSyncStatus('ok')}/>}
     </div>
   );
 }
@@ -316,9 +421,7 @@ function HomeTab({sessions,todayWorkout,onStart}){
   const weekDates=getWeekDates(getMondayOfWeek(new Date()));
   const todayDay=getTodayDay();
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const todayIdx=days.indexOf(todayDay);
-  const nextWorkout=!todayWorkout&&WORKOUTS.find(w=>days.indexOf(w.day)>todayIdx);
-
+  const nextWorkout=!todayWorkout&&WORKOUTS.find(w=>days.indexOf(w.day)>days.indexOf(todayDay));
   return(
     <div>
       <div className="stat-row">
@@ -326,7 +429,6 @@ function HomeTab({sessions,todayWorkout,onStart}){
         <div className="stat-pill"><div className="val">{stats.thisWeek}/4</div><div className="lbl">This Week</div></div>
         <div className="stat-pill"><div className="val">{stats.total}</div><div className="lbl">All Time</div></div>
       </div>
-
       {todayWorkout&&!todayDone&&(
         <div className="today-card">
           <div className="tc-lbl">Today's Session</div>
@@ -342,10 +444,9 @@ function HomeTab({sessions,todayWorkout,onStart}){
           {nextWorkout&&<div style={{marginTop:4,fontSize:12}}>Next: <strong>{nextWorkout.name}</strong> on {nextWorkout.day}</div>}
         </div>
       )}
-
       <div className="week-header">
         <span className="week-title">This Week</span>
-        <span className="week-count">{stats.thisWeek} / 4 sessions</span>
+        <span className="week-count">{stats.thisWeek} / 4</span>
       </div>
       <div className="week-bar"><div className="week-bar-fill" style={{width:`${(stats.thisWeek/4)*100}%`}}/></div>
       <div className="week-grid">
@@ -370,6 +471,7 @@ function HomeTab({sessions,todayWorkout,onStart}){
 function LogTab({sessions,onSave}){
   const [phase,setPhase]=useState('pick');
   const [ls,setLs]=useState(null);
+  const [logDate,setLogDate]=useState(todayStr());
   const [reviewPRs,setReviewPRs]=useState([]);
   const [finalVol,setFinalVol]=useState(0);
 
@@ -380,7 +482,7 @@ function LogTab({sessions,onSave}){
     const exercises=workout.exercises.map(ex=>{
       const ps=prevMap[ex.name]||[];
       return{name:ex.name,targetSets:ex.sets,targetReps:ex.reps,prevSets:ps,
-        sets:Array.from({length:ex.sets},(_,i)=>({set:i+1,weight:ps[i]?.weight||'',reps:ex.reps,done:false}))};
+        sets:Array.from({length:ex.sets},(_,i)=>({set:i+1,weight:ps[i]?.weight||'',reps:'',done:false}))};
     });
     setLs({workout,exercises});setPhase('log');
   }
@@ -388,29 +490,25 @@ function LogTab({sessions,onSave}){
   function upd(ei,si,field,val){
     setLs(p=>({...p,exercises:p.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[field]:val})})}));
   }
-
   function adj(ei,si,delta){
     const cur=parseFloat(ls.exercises[ei].sets[si].weight)||0;
     const next=Math.max(0,Math.round((cur+delta)*2)/2);
     upd(ei,si,'weight',next===0?'':String(next));
   }
-
   function addSet(ei){
     setLs(p=>({...p,exercises:p.exercises.map((ex,i)=>{
       if(i!==ei)return ex;
       const last=ex.sets[ex.sets.length-1];
-      return{...ex,sets:[...ex.sets,{set:ex.sets.length+1,weight:last?.weight||'',reps:ex.targetReps,done:false}]};
+      return{...ex,sets:[...ex.sets,{set:ex.sets.length+1,weight:last?.weight||'',reps:'',done:false}]};
     })}));
   }
-
   function goReview(){
-    const session={date:todayStr(),wid:ls.workout.id,wname:ls.workout.name,
+    const session={date:logDate,wid:ls.workout.id,wname:ls.workout.name,
       exercises:ls.exercises.map(ex=>({name:ex.name,sets:ex.sets.map(s=>({...s}))}))};
-    const vol=calcVolume(session.exercises);
-    setFinalVol(vol);setReviewPRs(detectNewPRs(sessions,session));
+    setFinalVol(calcVolume(session.exercises));
+    setReviewPRs(detectNewPRs(sessions,session));
     setLs(p=>({...p,pending:session}));setPhase('review');
   }
-
   function confirmSave(){onSave(ls.pending);setPhase('done');}
 
   const anyDone=ls?.exercises.some(ex=>ex.sets.some(s=>s.done));
@@ -419,9 +517,9 @@ function LogTab({sessions,onSave}){
     <div className="completion">
       <div className="emo">🎉</div>
       <h2>{ls.workout.name} Complete!</h2>
-      <p>Session saved successfully.</p>
+      <p>Session saved for {formatDate(ls.pending.date)}.</p>
       <div className="vol">{finalVol.toLocaleString()} kg total volume</div><br/>
-      <button className="finish-btn" onClick={()=>{setPhase('pick');setLs(null);}}>Log Another Workout</button>
+      <button className="finish-btn" onClick={()=>{setPhase('pick');setLs(null);setLogDate(todayStr());}}>Log Another Workout</button>
     </div>
   );
 
@@ -433,6 +531,7 @@ function LogTab({sessions,onSave}){
       </div>
       {reviewPRs.length>0&&<div className="pr-alert">🏆 New PR{reviewPRs.length>1?'s':''}: {reviewPRs.join(', ')}</div>}
       <div className="review-summary">
+        <div style={{fontSize:12,color:'#888',marginBottom:6}}>{formatDate(logDate)}</div>
         <div className="review-vol">{finalVol.toLocaleString()} kg</div>
         <div className="review-vol-lbl">Total Volume</div>
         <div className="review-ex">
@@ -453,12 +552,18 @@ function LogTab({sessions,onSave}){
         <button className="back-btn" onClick={()=>setPhase('pick')}>← Back</button>
         <span className="log-title">{ls.workout.name}</span>
       </div>
+      <div className="date-row">
+        <label>📅 Date</label>
+        <input className="date-input" type="date" value={logDate} max={todayStr()} onChange={e=>setLogDate(e.target.value)}/>
+      </div>
       {ls.exercises.map((ex,ei)=>{
-        const prevBest=ex.prevSets.length>0?(()=>{
-          const maxW=Math.max(...ex.prevSets.filter(s=>s.weight).map(s=>parseFloat(s.weight)||0));
+        const prevBest=(()=>{
+          const ws=ex.prevSets.filter(s=>s.weight).map(s=>parseFloat(s.weight)||0);
+          if(!ws.length)return null;
+          const maxW=Math.max(...ws);
           const ms=ex.prevSets.find(s=>parseFloat(s.weight)===maxW);
-          return maxW>0?`${maxW}kg × ${ms?.reps||'?'}`:null;
-        })():null;
+          return`${maxW}kg × ${ms?.reps||'?'}`;
+        })();
         return(
           <div key={ei} className="ex-block">
             <div className="ex-head">
@@ -470,11 +575,14 @@ function LogTab({sessions,onSave}){
                 <div className="set-num">S{set.set}</div>
                 <div className="wfield">
                   <button className="adj" onClick={()=>adj(ei,si,-2.5)}>−</button>
-                  <input className="winput" type="number" inputMode="decimal" placeholder="kg" value={set.weight} onChange={e=>upd(ei,si,'weight',e.target.value)}/>
+                  <input className="winput" type="number" inputMode="decimal" placeholder="kg"
+                    value={set.weight} onFocus={sel} onChange={e=>upd(ei,si,'weight',e.target.value)}/>
                   <button className="adj" onClick={()=>adj(ei,si,2.5)}>+</button>
                 </div>
-                <input className="rinput" type="number" inputMode="numeric" value={set.reps} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
-                <button className={`tick${set.done?' ticked':''}`} onClick={()=>upd(ei,si,'done',!set.done)} aria-label={`Set ${set.set} ${set.done?'undo':'done'}`}>{set.done?'✓':''}</button>
+                <input className="rinput" type="number" inputMode="numeric" placeholder={String(ex.targetReps)}
+                  value={set.reps} onFocus={sel} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
+                <button className={`tick${set.done?' ticked':''}`} onClick={()=>upd(ei,si,'done',!set.done)}
+                  aria-label={`Set ${set.set} ${set.done?'undo':'done'}`}>{set.done?'✓':''}</button>
               </div>
             ))}
             <div className="add-set-row"><button className="add-set-btn" onClick={()=>addSet(ei)}>+ Add Set</button></div>
@@ -524,7 +632,7 @@ function ProgressTab({sessions,onDelete,onEdit}){
   useEffect(()=>{
     if(!chartRef.current)return;
     if(chartInst.current){chartInst.current.destroy();chartInst.current=null;}
-    if(liftData.length===0)return;
+    if(!liftData.length)return;
     chartInst.current=new Chart(chartRef.current,{type:'line',data:{labels:liftData.map(d=>formatDate(d.date)),datasets:[{label:'Max kg',data:liftData.map(d=>d.maxW),borderColor:'#04505e',backgroundColor:'rgba(4,80,94,0.08)',pointBackgroundColor:'#04505e',pointRadius:5,tension:0.3,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:40}},y:{ticks:{font:{size:11}},beginAtZero:false}}}});
     return()=>{if(chartInst.current){chartInst.current.destroy();chartInst.current=null;}};
   },[liftData]);
@@ -532,37 +640,27 @@ function ProgressTab({sessions,onDelete,onEdit}){
   const last5=useMemo(()=>[...sessions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5),[sessions]);
 
   function handleExport(){
-    const blob=new Blob([JSON.stringify(sessions,null,2)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`gym-backup-${todayStr()}.json`;a.click();
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(sessions,null,2)],{type:'application/json'}));a.download=`gym-backup-${todayStr()}.json`;a.click();
   }
-
   function handleImport(e){
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
     reader.onload=evt=>{
-      try{
-        const imp=JSON.parse(evt.target.result);
-        if(!Array.isArray(imp))throw new Error();
-        const merged=[...sessions];
-        for(const s of imp){const idx=merged.findIndex(x=>x.date===s.date&&x.wid===s.wid);if(idx>=0)merged[idx]=s;else merged.push(s);}
-        saveSessions(merged);window.location.reload();
-      }catch{alert('Invalid backup file.');}
+      try{const imp=JSON.parse(evt.target.result);if(!Array.isArray(imp))throw 0;const merged=mergeSessions(sessions,imp);saveSessions(merged);window.location.reload();}
+      catch{alert('Invalid backup file.');}
     };
     reader.readAsText(file);e.target.value='';
   }
 
-  if(sessions.length===0)return(
-    <div className="empty"><div className="emo">📈</div><p>No sessions yet.<br/>Log a workout to see progress!</p></div>
-  );
+  if(!sessions.length)return<div className="empty"><div className="emo">📈</div><p>No sessions yet.<br/>Log a workout to see progress!</p></div>;
 
   return(
     <div>
       {allEx.length>0&&<>
         <div className="slabel">Lift Progress</div>
         <div className="lift-btns">{allEx.map(n=><button key={n} className={`lift-btn${active===n?' active':''}`} onClick={()=>setSelLift(n)}>{n}</button>)}</div>
-        <div className="chart-wrap">{liftData.length>0?<canvas ref={chartRef}/>:<div className="no-data">No weight data for {active} yet.</div>}</div>
+        <div className="chart-wrap">{liftData.length>0?<canvas ref={chartRef}/>:<div className="no-data">No weight logged for {active} yet.</div>}</div>
       </>}
-
       <div className="slabel">Recent Sessions</div>
       {last5.map((s,i)=>{
         const vol=calcVolume(s.exercises);
@@ -577,11 +675,10 @@ function ProgressTab({sessions,onDelete,onEdit}){
               <button className="edit-btn" onClick={()=>setEditing(s)}>✏️ Edit</button>
               <button className="del-btn" onClick={()=>setConfirmDel({date:s.date,wid:s.wid})}>🗑 Delete</button>
             </div>
-            {isDel&&<div className="confirm-del"><p>Delete this session permanently?</p><button className="cy" onClick={()=>{onDelete(s.date,s.wid);setConfirmDel(null);}}>Delete</button><button className="cn" onClick={()=>setConfirmDel(null)}>Cancel</button></div>}
+            {isDel&&<div className="confirm-del"><p>Delete permanently?</p><button className="cy" onClick={()=>{onDelete(s.date,s.wid);setConfirmDel(null);}}>Delete</button><button className="cn" onClick={()=>setConfirmDel(null)}>Cancel</button></div>}
           </div>
         );
       })}
-
       <div className="data-section">
         <h3>Data Backup</h3>
         <div className="data-btns">
@@ -590,7 +687,6 @@ function ProgressTab({sessions,onDelete,onEdit}){
           <button className="data-btn danger" onClick={()=>window.confirm('Delete ALL data? Cannot be undone.')&&(saveSessions([]),window.location.reload())}>🗑 Clear</button>
         </div>
       </div>
-
       {editing&&<EditModal session={editing} onSave={s=>{onEdit(s);setEditing(null);}} onClose={()=>setEditing(null)}/>}
     </div>
   );
@@ -599,18 +695,11 @@ function ProgressTab({sessions,onDelete,onEdit}){
 // ── Edit Modal ─────────────────────────────────────────────────────────────
 function EditModal({session,onSave,onClose}){
   const [exercises,setEx]=useState(session.exercises.map(ex=>({...ex,sets:ex.sets.map(s=>({...s}))})));
-
-  function upd(ei,si,field,val){
-    setEx(p=>p.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[field]:val})}));
-  }
-
+  function upd(ei,si,field,val){setEx(p=>p.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[field]:val})}));}
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
-        <div className="modal-hdr">
-          <h3>Edit — {session.wname||session.wid}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+        <div className="modal-hdr"><h3>Edit — {session.wname||session.wid}</h3><button className="modal-close" onClick={onClose}>✕</button></div>
         <div style={{fontSize:12,color:'#888',marginBottom:12}}>{formatDate(session.date)}</div>
         {exercises.map((ex,ei)=>(
           <div key={ei} className="ex-block">
@@ -618,8 +707,8 @@ function EditModal({session,onSave,onClose}){
             {ex.sets.map((set,si)=>(
               <div key={si} className={`set-row${set.done?' done-set':''}`}>
                 <div className="set-num">S{set.set}</div>
-                <div className="wfield"><input className="winput" style={{flex:1}} type="number" inputMode="decimal" placeholder="kg" value={set.weight} onChange={e=>upd(ei,si,'weight',e.target.value)}/></div>
-                <input className="rinput" type="number" inputMode="numeric" value={set.reps} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
+                <div className="wfield"><input className="winput" style={{flex:1}} type="number" inputMode="decimal" placeholder="kg" value={set.weight} onFocus={sel} onChange={e=>upd(ei,si,'weight',e.target.value)}/></div>
+                <input className="rinput" type="number" inputMode="numeric" value={set.reps} onFocus={sel} onChange={e=>upd(ei,si,'reps',e.target.value)}/>
                 <button className={`tick${set.done?' ticked':''}`} onClick={()=>upd(ei,si,'done',!set.done)}>{set.done?'✓':''}</button>
               </div>
             ))}
@@ -631,11 +720,88 @@ function EditModal({session,onSave,onClose}){
   );
 }
 
+// ── Settings Modal ─────────────────────────────────────────────────────────
+function SettingsModal({onClose,onConnected}){
+  const [cfgText,setCfgText]=useState(localStorage.getItem('gym_fb_config')||'');
+  const [code,setCode]=useState(localStorage.getItem('gym_sync_code')||'');
+  const [status,setStatus]=useState(''); // '' | 'saving' | 'ok' | 'err'
+  const [errMsg,setErrMsg]=useState('');
+
+  async function handleSave(){
+    if(!cfgText.trim()||!code.trim()){setErrMsg('Both fields required.');return;}
+    setStatus('saving');setErrMsg('');
+    const ok=await initFirebase(cfgText,code);
+    if(!ok){setStatus('err');setErrMsg('Invalid Firebase config — check the JSON and try again.');return;}
+    try{
+      await fetchCloudSessions();
+      localStorage.setItem('gym_fb_config',cfgText);
+      localStorage.setItem('gym_sync_code',code.trim());
+      setStatus('ok');
+      onConnected();
+    }catch(e){
+      setStatus('err');
+      setErrMsg('Connection failed. Make sure Firestore is enabled and in test mode.');
+    }
+  }
+
+  function handleDisconnect(){
+    localStorage.removeItem('gym_fb_config');localStorage.removeItem('gym_sync_code');
+    _db=null;_syncCode=null;
+    setCfgText('');setCode('');setStatus('');setErrMsg('');
+  }
+
+  const hasSaved=!!localStorage.getItem('gym_fb_config');
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-hdr"><h3>⚙️ Settings</h3><button className="modal-close" onClick={onClose}>✕</button></div>
+
+        <div className="settings-h4">Cross-Device Sync</div>
+        <p className="settings-desc">
+          Sync your data between phone and PC using your own free Firebase project.
+          Setup takes about 5 minutes and you only do it once.
+        </p>
+
+        <div className="setup-steps">
+          <div>1. Go to <strong>console.firebase.google.com</strong></div>
+          <div>2. Create a project (any name, disable Analytics)</div>
+          <div>3. Click <strong>Add app → Web</strong>, give it a name, copy the <code>firebaseConfig</code> object</div>
+          <div>4. Go to <strong>Firestore Database → Create database → Start in test mode</strong></div>
+          <div>5. Paste the config below and pick a sync code</div>
+        </div>
+
+        <label className="settings-lbl">Firebase Config <span>(paste the firebaseConfig JSON)</span></label>
+        <textarea className="settings-ta" value={cfgText} onChange={e=>setCfgText(e.target.value)}
+          placeholder={'{\n  "apiKey": "AIza...",\n  "authDomain": "myapp.firebaseapp.com",\n  "projectId": "myapp",\n  "storageBucket": "myapp.appspot.com",\n  "messagingSenderId": "123456789",\n  "appId": "1:123456:web:abc"\n}'}/>
+
+        <label className="settings-lbl" style={{marginTop:12}}>Sync Code <span>(same on all your devices, like a password)</span></label>
+        <input className="settings-input" type="text" value={code} onChange={e=>setCode(e.target.value)} placeholder="e.g. lewis-gym-2024"/>
+
+        {status==='ok'&&<div className="settings-ok">✅ Connected! Your data will sync across devices.</div>}
+        {status==='err'&&<div className="settings-err">⚠️ {errMsg}</div>}
+        {!status&&errMsg&&<div className="settings-err">⚠️ {errMsg}</div>}
+
+        <button className="modal-save" onClick={handleSave} disabled={status==='saving'}>
+          {status==='saving'?'Connecting…':'Save & Connect'}
+        </button>
+
+        {hasSaved&&<button className="disconnect-btn" onClick={handleDisconnect}>Disconnect sync</button>}
+
+        <hr className="divider"/>
+        <div style={{fontSize:12,color:'#888',textAlign:'center'}}>
+          All data is also stored locally on this device.<br/>Sync only requires internet when saving or opening the app.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PRs ────────────────────────────────────────────────────────────────────
 function PRsTab({sessions}){
   const prs=useMemo(()=>getPRs(sessions),[sessions]);
   const list=Object.entries(prs).sort((a,b)=>b[1].weight-a[1].weight);
-  if(list.length===0)return<div className="empty"><div className="emo">🏆</div><p>No PRs yet.<br/>Log your first workout to start tracking!</p></div>;
+  if(!list.length)return<div className="empty"><div className="emo">🏆</div><p>No PRs yet.<br/>Log your first workout to start tracking!</p></div>;
   return(
     <div>
       <div className="slabel">Personal Records</div>
