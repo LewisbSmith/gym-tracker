@@ -367,8 +367,7 @@ function App(){
   const [sessions,setSessions]=useState(loadSessions);
   const [toast,setToast]=useState(null);
   const [toastKey,setToastKey]=useState(0);
-  const [showSettings,setShowSettings]=useState(false);
-  const [syncStatus,setSyncStatus]=useState('off'); // off | ok | err
+  const [syncStatus,setSyncStatus]=useState('off');
 
   const showToast=useCallback((msg)=>{setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),3100);},[]);
 
@@ -432,17 +431,8 @@ function App(){
   return(
     <div>
       <div className="header">
-        <div className="header-row">
-          <div>
-            <h1>💪 Gym Tracker</h1>
-            <p>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
-          </div>
-          <button className="settings-btn" onClick={()=>setShowSettings(true)} aria-label="Settings">
-            ⚙️
-            {syncStatus==='ok'&&<span className="sync-dot sync-ok">●</span>}
-            {syncStatus==='err'&&<span className="sync-dot sync-err">●</span>}
-          </button>
-        </div>
+        <h1>💪 Gym Tracker</h1>
+        <p>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
       </div>
       <div className="content">
         {tab==='home'&&<HomeTab sessions={sessions} todayWorkout={todayWorkout} onStart={()=>setTab('log')}/>}
@@ -458,7 +448,6 @@ function App(){
         ))}
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
-      {showSettings&&<SettingsModal onClose={()=>setShowSettings(false)} onConnected={()=>setSyncStatus('ok')}/>}
     </div>
   );
 }
@@ -772,81 +761,6 @@ function EditModal({session,onSave,onClose}){
 }
 
 // ── Settings Modal ─────────────────────────────────────────────────────────
-function SettingsModal({onClose,onConnected}){
-  const [cfgText,setCfgText]=useState(localStorage.getItem('gym_fb_config')||'');
-  const [code,setCode]=useState(localStorage.getItem('gym_sync_code')||'');
-  const [status,setStatus]=useState(''); // '' | 'saving' | 'ok' | 'err'
-  const [errMsg,setErrMsg]=useState('');
-
-  async function handleSave(){
-    if(!cfgText.trim()||!code.trim()){setErrMsg('Both fields required.');return;}
-    setStatus('saving');setErrMsg('');
-    const ok=await initFirebase(cfgText,code);
-    if(!ok){setStatus('err');setErrMsg('Invalid Firebase config — check the JSON and try again.');return;}
-    try{
-      await fetchCloudSessions();
-      localStorage.setItem('gym_fb_config',cfgText);
-      localStorage.setItem('gym_sync_code',code.trim());
-      setStatus('ok');
-      onConnected();
-    }catch(e){
-      setStatus('err');
-      setErrMsg('Connection failed. Make sure Firestore is enabled and in test mode.');
-    }
-  }
-
-  function handleDisconnect(){
-    localStorage.removeItem('gym_fb_config');localStorage.removeItem('gym_sync_code');
-    _db=null;_syncCode=null;
-    setCfgText('');setCode('');setStatus('');setErrMsg('');
-  }
-
-  const hasSaved=!!localStorage.getItem('gym_fb_config');
-
-  return(
-    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal">
-        <div className="modal-hdr"><h3>⚙️ Settings</h3><button className="modal-close" onClick={onClose}>✕</button></div>
-
-        <div className="settings-h4">Cross-Device Sync</div>
-        <p className="settings-desc">
-          Sync your data between phone and PC using your own free Firebase project.
-          Setup takes about 5 minutes and you only do it once.
-        </p>
-
-        <div className="setup-steps">
-          <div>1. Go to <strong>console.firebase.google.com</strong></div>
-          <div>2. Create a project (any name, disable Analytics)</div>
-          <div>3. Click <strong>Add app → Web</strong>, give it a name, copy the <code>firebaseConfig</code> object</div>
-          <div>4. Go to <strong>Firestore Database → Create database → Start in test mode</strong></div>
-          <div>5. Paste the config below and pick a sync code</div>
-        </div>
-
-        <label className="settings-lbl">Firebase Config <span>(paste the firebaseConfig JSON)</span></label>
-        <textarea className="settings-ta" value={cfgText} onChange={e=>setCfgText(e.target.value)}
-          placeholder={'{\n  "apiKey": "AIza...",\n  "authDomain": "myapp.firebaseapp.com",\n  "projectId": "myapp",\n  "storageBucket": "myapp.appspot.com",\n  "messagingSenderId": "123456789",\n  "appId": "1:123456:web:abc"\n}'}/>
-
-        <label className="settings-lbl" style={{marginTop:12}}>Sync Code <span>(same on all your devices, like a password)</span></label>
-        <input className="settings-input" type="text" value={code} onChange={e=>setCode(e.target.value)} placeholder="e.g. lewis-gym-2024"/>
-
-        {status==='ok'&&<div className="settings-ok">✅ Connected! Your data will sync across devices.</div>}
-        {status==='err'&&<div className="settings-err">⚠️ {errMsg}</div>}
-        {!status&&errMsg&&<div className="settings-err">⚠️ {errMsg}</div>}
-
-        <button className="modal-save" onClick={handleSave} disabled={status==='saving'}>
-          {status==='saving'?'Connecting…':'Save & Connect'}
-        </button>
-
-        {hasSaved&&<button className="disconnect-btn" onClick={handleDisconnect}>Disconnect sync</button>}
-
-        <hr className="divider"/>
-        <div style={{fontSize:12,color:'#888',textAlign:'center'}}>
-          All data is also stored locally on this device.<br/>Sync only requires internet when saving or opening the app.
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── PRs ────────────────────────────────────────────────────────────────────
 function PRsTab({sessions}){
