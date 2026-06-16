@@ -209,9 +209,43 @@
 let _db = null;
 let _syncCode = null;
 
+function parseFirebaseConfig(raw) {
+  if (typeof raw !== 'string') return raw;
+
+  // Normalise curly/smart quotes to straight quotes
+  let s = raw
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"');
+
+  // Extract just the object literal if the user pasted the full Firebase snippet
+  // e.g. "const firebaseConfig = { ... };" or "const app = initializeApp({ ... });"
+  const objMatch = s.match(/\{[\s\S]*\}/);
+  if (!objMatch) return null;
+  s = objMatch[0];
+
+  // Remove trailing commas before } or ] (invalid in JSON but valid in JS)
+  s = s.replace(/,\s*([}\]])/g, '$1');
+
+  // Try strict JSON first
+  try { return JSON.parse(s); } catch(_) {}
+
+  // Convert JS object literal (unquoted keys) to JSON
+  // Quote every unquoted key: word chars at start of a value pair
+  try {
+    const jsonified = s
+      .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+      .replace(/:\s*'([^'\\]*(\\.[^'\\]*)*)'/g, ': "$1"'); // single-quoted values → double
+    return JSON.parse(jsonified);
+  } catch(_) {}
+
+  return null;
+}
+
 async function initFirebase(configStr, code) {
   try {
-    const config = typeof configStr === 'string' ? JSON.parse(configStr) : configStr;
+    const config = parseFirebaseConfig(configStr);
+    const required = ['apiKey','authDomain','projectId','appId'];
+    if (!config || required.some(k => !config[k])) return false;
     if (firebase.apps.length > 0) {
       await Promise.all(firebase.apps.map(a => a.delete()));
     }
